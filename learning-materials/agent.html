@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Agent（智能体）· 概念学习资料</title>
+<style>
+  :root{
+    --primary:#2563eb; --primary-light:#eff6ff; --border:#e5e7eb;
+    --text:#1f2937; --muted:#6b7280; --bg:#ffffff; --warn-bg:#fffbeb; --warn-border:#f59e0b;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{font-family:"Microsoft YaHei","PingFang SC","Segoe UI",sans-serif;color:var(--text);background:#f8fafc;line-height:1.8}
+  .page{max-width:860px;margin:0 auto;padding:40px 24px 64px}
+  header{background:var(--bg);border:1px solid var(--border);border-radius:14px;padding:36px 40px;margin-bottom:28px}
+  h1{font-size:30px;color:var(--primary);margin-bottom:6px}
+  .en{color:var(--muted);font-size:15px;margin-bottom:18px}
+  .meta{display:flex;flex-wrap:wrap;gap:10px;font-size:13px}
+  .meta span{background:var(--primary-light);color:var(--primary);border-radius:999px;padding:3px 14px}
+  section{background:var(--bg);border:1px solid var(--border);border-radius:14px;padding:32px 40px;margin-bottom:22px}
+  h2{font-size:20px;color:var(--primary);padding-bottom:10px;border-bottom:2px solid var(--primary-light);margin-bottom:18px}
+  h2 .idx{display:inline-block;background:var(--primary);color:#fff;font-size:13px;border-radius:6px;padding:1px 8px;margin-right:10px;vertical-align:2px}
+  h3{font-size:16px;margin:20px 0 8px}
+  p{margin-bottom:12px}
+  ul,ol{padding-left:24px;margin-bottom:12px}
+  li{margin-bottom:8px}
+  .card{background:var(--primary-light);border-radius:10px;padding:18px 22px;margin:14px 0}
+  .warn{background:var(--warn-bg);border-left:4px solid var(--warn-border);border-radius:8px;padding:16px 20px;margin:14px 0}
+  .vs-table{width:100%;border-collapse:collapse;margin:14px 0;font-size:14.5px}
+  .vs-table th,.vs-table td{border:1px solid var(--border);padding:10px 14px;text-align:left;vertical-align:top}
+  .vs-table th{background:var(--primary-light);color:var(--primary)}
+  .src{list-style:none;padding-left:0}
+  .src li{border:1px solid var(--border);border-radius:10px;padding:14px 18px;margin-bottom:10px}
+  .src a{color:var(--primary);text-decoration:none;font-weight:600}
+  .src a:hover{text-decoration:underline}
+  .src .type{display:inline-block;font-size:12px;color:var(--muted);border:1px solid var(--border);border-radius:999px;padding:1px 10px;margin-left:10px;vertical-align:1px}
+  .note{color:var(--muted);font-size:14px;margin-top:16px;border-top:1px dashed var(--border);padding-top:14px}
+  .term{font-weight:600;color:var(--primary)}
+  footer{text-align:center;color:var(--muted);font-size:13px;margin-top:10px}
+</style>
+</head>
+<body>
+<div class="page">
+
+<header>
+  <h1>Agent（智能体）</h1>
+  <div class="en">Agent · AI Agent · 智能体</div>
+  <div class="meta">
+    <span>领域：人工智能 / 大模型应用</span>
+    <span>目标读者：初学者</span>
+    <span>深度：入门到进阶</span>
+    <span>检索日期：2026-09-05</span>
+  </div>
+</header>
+
+<!-- 1 个人解释 -->
+<section>
+  <h2><span class="idx">1</span>个人解释</h2>
+  <p>普通聊天机器人像一个<strong>问一句答一句的客服</strong>：你问，它答，答完就结束了。而 Agent 更像一个<strong>能自己想办法的助理</strong>——你交给她一个目标（比如"帮我把这次出差报销提交了"），她会自己列出步骤：识别发票照片、查出金额、判断是否符合公司标准、提交系统；发现金额超了上限，她会停下来问你怎么办，得到答复后继续，直到任务完成。</p>
+  <p>换句话说，Agent 和聊天机器人的本质区别不在于"聪明多少"，而在于<strong>谁在控制流程</strong>：聊天机器人按你的节奏被动应答，Agent 自己规划、自己行动、自己根据结果调整（类比：流水线工人 vs 能独立接活的助理；该类比仅在"自主安排工作节奏"这一点上成立，Agent 并没有人类助理那样的常识和责任能力）。</p>
+</section>
+
+<!-- 2 核心机制 -->
+<section>
+  <h2><span class="idx">2</span>核心机制</h2>
+  <p>Anthropic 给出的工作定义是：<strong>Agent 是在完成任务时自己指挥自己的流程和工具使用的 AI 模型</strong>——即自己决定"怎么做到用户想要的结果"，而不是按固定脚本执行。它运行在一个自驱动的循环里：<strong>规划 → 行动 → 观察结果 → 调整 → 重复</strong>，直到任务完成或需要请示人类。</p>
+
+  <h3>四大组成部分（Anthropic 框架）</h3>
+  <ul>
+    <li><span class="term">模型（Model）</span>：Agent 的"大脑"，提供理解、推理和决策能力。</li>
+    <li><span class="term">约束框架（Harness）</span>：模型运行的指令和安全护栏，例如"超过 100 美元的支出必须先请用户确认"。</li>
+    <li><span class="term">工具（Tools）</span>：模型可以调用的外部服务——邮箱、日历、代码执行器等。没有工具，模型"看得懂发票却交不了单"。</li>
+    <li><span class="term">环境（Environment）</span>：Agent 运行的场所及其可访问的文件、网站和系统，决定了它的数据边界和风险等级。</li>
+  </ul>
+
+  <h3>经典能力公式</h3>
+  <div class="card">
+    <strong>Agent = LLM（大脑） + Memory（记忆） + Planning（规划） + Tool Use（工具调用）</strong><br>
+    —— 业界广泛引用的公式（源自 Lilian Weng 的经典总结）
+  </div>
+  <ul>
+    <li><span class="term">规划</span>：把复杂任务拆成子步骤，常见模式有 ReAct（推理↔行动交替）、先规划后执行等；执行中可根据反馈动态重新规划。</li>
+    <li><span class="term">记忆</span>：短期记忆即当前对话的上下文；长期记忆通常借助外部存储（如向量数据库）实现跨会话的记住。</li>
+    <li><span class="term">工具调用</span>：模型不直接执行操作，而是输出结构化的调用请求（函数名 + JSON 参数），由运行时代码执行后把结果回传给模型。</li>
+  </ul>
+
+  <h3>关键循环：ReAct</h3>
+  <p>Agent 最典型的工作方式是 <strong>Thought（思考）→ Action（行动）→ Observation（观察）</strong> 的循环：模型先推理"当前状态离目标还差什么"，选择一个工具执行，读回结果，再决定下一步——这也是它能够纠错的原因：如果某一步失败，观察结果会暴露问题，Agent 可以换一条路重试。</p>
+</section>
+
+<!-- 3 应用场景 -->
+<section>
+  <h2><span class="idx">3</span>应用场景</h2>
+  <ul>
+    <li><span class="term">编程 Agent</span>：开发者描述一个需求（如"修复这个 bug，涉及多个文件"），Agent 自己读代码、定位问题、修改多个文件、跑测试验证。代码任务特别适合 Agent，因为测试结果提供了明确的成败反馈。</li>
+    <li><span class="term">客户支持</span>：Agent 在对话中调用工具查询订单、读取知识库、办理退款——把"会聊天"和"能办事"结合，成功标准明确（用户问题是否解决）。</li>
+    <li><span class="term">办公事务自动化</span>：如提交报销——Agent 逐张识别票据、提取金额与商家、归类提交，遇到超限等异常主动请示人类后继续。</li>
+    <li><span class="term">操作电脑（Computer Use）</span>：Agent 像人一样看屏幕、点鼠标、敲键盘，操作没有 API 的传统软件界面完成任务。</li>
+  </ul>
+  <div class="warn"><strong>典型失效情况</strong>：开放式任务中步骤数不可预测，自主性带来更高的成本和误差累积——一步走偏可能连环出错。因此 Anthropic 的建议是：先用沙箱环境和护栏充分测试，任务能用确定性的 Workflow 解决时，就不要用 Agent。</div>
+</section>
+
+<!-- 4 边界辨析 -->
+<section>
+  <h2><span class="idx">4</span>边界辨析</h2>
+  <table class="vs-table">
+    <tr><th>对比</th><th>A 是……</th><th>B 是……</th></tr>
+    <tr><td><strong>Agent vs Chatbot</strong></td><td>运行在自驱循环中，自己规划并调用工具，主动与环境交互</td><td>一问一答的问答机，不规划、不用工具、被动响应</td></tr>
+    <tr><td><strong>Agent vs Workflow</strong></td><td>控制流由 LLM 动态决定，适合步骤数不可预测的开放式任务</td><td>控制流由预定义代码决定，LLM 只是流程中的一环，可预测、易调试</td></tr>
+    <tr><td><strong>Agent vs RAG</strong></td><td>会"做事"：规划、执行操作、根据反馈调整</td><td>只解决"找资料"：检索相关文档给模型参考，流程固定（检索→生成）</td></tr>
+  </table>
+
+  <h3>适用边界</h3>
+  <p>该用 Agent：任务开放式、步骤数无法预知、需要根据中间结果临场决策。不该用 Agent：任务步骤固定可枚举（一条 Workflow 或一个写好的提示词就够）——为 Agent 而 Agent 只会带来更高延迟、更高成本和更多失败模式。</p>
+
+  <h3>常见误解</h3>
+  <ul>
+    <li><strong>误解一：越"Agent 化"越先进。</strong>恰恰相反，行业共识（Anthropic《Building Effective Agents》）是"从最简单的方案开始，只有简单方案 demonstrably 不够时才增加复杂度"。多数任务只需要 Workflow 甚至单个好的提示词。</li>
+    <li><strong>误解二：Agent = 更聪明的大模型。</strong>Agent 是"模型 + 护栏 + 工具 + 环境"四层协作的系统工程：一个强模型配上糟糕的工具描述或过宽的权限，照样产出不可靠甚至危险的 Agent。</li>
+  </ul>
+</section>
+
+<!-- 5 来源链接 -->
+<section>
+  <h2><span class="idx">5</span>来源链接</h2>
+  <ul class="src">
+    <li><a href="https://www.anthropic.com/engineering/building-effective-agents" target="_blank">Building Effective Agents — Anthropic Engineering</a><span class="type">官方技术博客</span></li>
+    <li><a href="https://www.anthropic.com/research/trustworthy-agents" target="_blank">Trustworthy Agents in Practice — Anthropic Research</a><span class="type">官方研究文章</span></li>
+    <li><a href="https://agentpatterns.ai/patterns/agent-design/anthropic-effective-agents-framework" target="_blank">Anthropic's Effective Agents Framework: A Pattern Map — Agent Patterns</a><span class="type">技术社区</span></li>
+    <li><a href="https://best-ai-tools.org/learn/ai-agents" target="_blank">AI Agents Explained: From LLMs to Autonomous Systems — Best-AI.org</a><span class="type">学习指南</span></li>
+  </ul>
+  <p class="note">检索日期：2026-09-05。以上来源相互独立（2 个官方站点 + 2 个独立第三方站点），核心定义以 Anthropic 官方两篇为准，第三方来源用于交叉验证。</p>
+</section>
+
+<footer>概念学习资料 · 由 concept-learning-skill 生成 · 2026-09-05</footer>
+</div>
+</body>
+</html>

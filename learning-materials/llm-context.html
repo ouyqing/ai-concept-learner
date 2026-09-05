@@ -1,0 +1,135 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>大模型的上下文（Context）· 概念学习资料</title>
+<style>
+  :root{
+    --primary:#0d9488; --primary-light:#f0fdfa; --border:#e5e7eb;
+    --text:#1f2937; --muted:#6b7280; --bg:#ffffff; --warn-bg:#fffbeb; --warn-border:#f59e0b;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{font-family:"Microsoft YaHei","PingFang SC","Segoe UI",sans-serif;color:var(--text);background:#f8fafc;line-height:1.8}
+  .page{max-width:860px;margin:0 auto;padding:40px 24px 64px}
+  header{background:var(--bg);border:1px solid var(--border);border-radius:14px;padding:36px 40px;margin-bottom:28px}
+  h1{font-size:30px;color:var(--primary);margin-bottom:6px}
+  .en{color:var(--muted);font-size:15px;margin-bottom:18px}
+  .meta{display:flex;flex-wrap:wrap;gap:10px;font-size:13px}
+  .meta span{background:var(--primary-light);color:var(--primary);border-radius:999px;padding:3px 14px}
+  section{background:var(--bg);border:1px solid var(--border);border-radius:14px;padding:32px 40px;margin-bottom:22px}
+  h2{font-size:20px;color:var(--primary);padding-bottom:10px;border-bottom:2px solid var(--primary-light);margin-bottom:18px}
+  h2 .idx{display:inline-block;background:var(--primary);color:#fff;font-size:13px;border-radius:6px;padding:1px 8px;margin-right:10px;vertical-align:2px}
+  h3{font-size:16px;margin:20px 0 8px}
+  p{margin-bottom:12px}
+  ul,ol{padding-left:24px;margin-bottom:12px}
+  li{margin-bottom:8px}
+  .card{background:var(--primary-light);border-radius:10px;padding:18px 22px;margin:14px 0}
+  .warn{background:var(--warn-bg);border-left:4px solid var(--warn-border);border-radius:8px;padding:16px 20px;margin:14px 0}
+  .vs-table{width:100%;border-collapse:collapse;margin:14px 0;font-size:14.5px}
+  .vs-table th,.vs-table td{border:1px solid var(--border);padding:10px 14px;text-align:left;vertical-align:top}
+  .vs-table th{background:var(--primary-light);color:var(--primary)}
+  .src{list-style:none;padding-left:0}
+  .src li{border:1px solid var(--border);border-radius:10px;padding:14px 18px;margin-bottom:10px}
+  .src a{color:var(--primary);text-decoration:none;font-weight:600}
+  .src a:hover{text-decoration:underline}
+  .src .type{display:inline-block;font-size:12px;color:var(--muted);border:1px solid var(--border);border-radius:999px;padding:1px 10px;margin-left:10px;vertical-align:1px}
+  .note{color:var(--muted);font-size:14px;margin-top:16px;border-top:1px dashed var(--border);padding-top:14px}
+  .term{font-weight:600;color:var(--primary)}
+  footer{text-align:center;color:var(--muted);font-size:13px;margin-top:10px}
+</style>
+</head>
+<body>
+<div class="page">
+
+<header>
+  <h1>大模型的上下文（Context）</h1>
+  <div class="en">Context / Context Window / 上下文窗口</div>
+  <div class="meta">
+    <span>领域：人工智能 / 大语言模型</span>
+    <span>目标读者：初学者</span>
+    <span>深度：入门到进阶</span>
+    <span>检索日期：2026-09-05</span>
+  </div>
+</header>
+
+<!-- 1 个人解释 -->
+<section>
+  <h2><span class="idx">1</span>个人解释</h2>
+  <p>想象你和 AI 在<strong>一块大小固定的黑板上对话</strong>：你写的提问、AI 写的回答、之前所有的聊天记录，都只能写在这块黑板上。黑板写满之后，为了写下新内容，最早写在角落里的内容就会被擦掉——AI 也就"忘记"了那部分。这块黑板就是<strong>上下文（Context）</strong>，黑板的大小就是<strong>上下文窗口（Context Window）</strong>。</p>
+  <p>模型每次回答问题前，能"看到"的只有黑板上现存的内容——包括系统设定、对话历史、你贴给它的资料、工具返回的结果。不在黑板上的东西，它一概不知道。（类比仅在"容量有限、旧内容被覆盖"这一点上成立；黑板是真正擦除，而模型实际是按 Token 截断输入。）</p>
+</section>
+
+<!-- 2 核心机制 -->
+<section>
+  <h2><span class="idx">2</span>核心机制</h2>
+
+  <h3>计量单位：Token（词元）</h3>
+  <p>上下文的容量不用"字数"衡量，而用 <span class="term">Token</span>——模型处理信息的最小语义单元。粗略换算：中文约 1.5–2 个汉字占 1 个 Token，英文约 0.75 个单词占 1 个 Token；标点、空格甚至表情符号也会占用 Token。</p>
+
+  <h3>窗口的精确定义</h3>
+  <div class="card">
+    <strong>上下文窗口（Context Window）</strong>：基于 Transformer 架构的大语言模型<strong>一次可以处理的最大序列长度</strong>，即模型生成下一个 Token 时能够回顾和参考的前文 Token 数量上限。输入（Prompt）和输出（Output）<strong>共享</strong>这一空间。
+  </div>
+
+  <h3>窗口里装着什么</h3>
+  <ul>
+    <li><span class="term">系统提示词</span>：给模型的角色设定和规则，常驻窗口。</li>
+    <li><span class="term">对话历史</span>：本次会话中此前的问答。</li>
+    <li><span class="term">参考资料</span>：用户贴入的文档、检索（RAG）回来的片段、工具调用的返回结果。</li>
+  </ul>
+
+  <h3>上限由什么决定</h3>
+  <ul>
+    <li><span class="term">位置编码</span>：Transformer 本身不感知顺序，需要位置编码（如主流的 RoPE）给每个 Token 标"位置"；训练时见过的序列长度设定了理论上限，超出后需依赖插值等外推技巧。</li>
+    <li><span class="term">计算成本</span>：标准注意力机制的计算和显存开销随序列长度呈<strong>平方级（O(n²)）</strong>增长，长上下文意味着更贵、更慢。</li>
+    <li><span class="term">有效记忆</span>：窗口塞得下 ≠ 用得好。真正能被模型理解并利用的信息量（有效记忆）通常远小于窗口标称值。</li>
+  </ul>
+
+  <h3>发展现状</h3>
+  <p>窗口大小呈指数级增长：早期 GPT-3.5 只有 4K Token；GPT-4o、Llama 3.1 等达到 128K；Claude 约 200K；Gemini 1.5 Pro 支持 100 万–200 万 Token。窗口变大之后，配套的"上下文工程"（只把相关信息放进窗口）成为新的核心课题。</p>
+</section>
+
+<!-- 3 应用场景 -->
+<section>
+  <h2><span class="idx">3</span>应用场景</h2>
+  <ul>
+    <li><span class="term">长对话的记忆管理</span>：多轮对话越聊越长，工程师用"滑动窗口"（只保留最近 N 轮）或"摘要压缩"（定期把早期对话总结成短文）控制窗口占用，防止用户发现 AI"失忆"。</li>
+    <li><span class="term">长文档处理</span>：合同审查、论文分析等任务文档动辄上百页。直接塞满窗口既贵又慢，工程上的标准做法是分块（Chunking）+ 按需检索（RAG），只把相关片段放进窗口。</li>
+    <li><span class="term">Agent 的状态管理</span>：Agent 的任务状态、中间结果、工具返回都挤在同一个窗口里，需要按优先级裁剪——系统指令永不被裁，闲聊记录最先被清理。</li>
+    <li><span class="term">成本与延迟控制</span>：模型按输入/输出 Token 计费，窗口内容越精简，单次调用越便宜、响应越快；行业估计管理不善的系统会浪费 60–80% 的窗口空间。</li>
+  </ul>
+  <div class="warn"><strong>典型失效情况</strong>：对话或文档超出窗口上限时直接报错（"context length exceeded"）；即使没超限，关键信息若淹没在大量无关内容中，模型注意力被稀释，也会"看不见"重点。</div>
+</section>
+
+<!-- 4 边界辨析 -->
+<section>
+  <h2><span class="idx">4</span>边界辨析</h2>
+  <table class="vs-table">
+    <tr><th>对比</th><th>A 是……</th><th>B 是……</th></tr>
+    <tr><td><strong>上下文窗口 vs 上下文长度</strong></td><td>实际预测时模型考虑的输入序列长度，随输入变化</td><td>模型架构能处理的最大序列长度，是理论上限；实际窗口 ≤ 长度上限</td></tr>
+    <tr><td><strong>上下文 vs 训练知识</strong></td><td>本次调用时模型"眼前看得到"的信息，随每次对话重新组装</td><td>训练阶段写进参数里的知识，不会因为对话变长而丢失</td></tr>
+    <tr><td><strong>上下文 vs 长期记忆</strong></td><td>短期工作记忆，窗口有限、轮次结束即清空</td><td>需借助外部存储（如向量数据库）实现的跨会话记忆，按需检索回填窗口</td></tr>
+  </table>
+
+  <h3>常见误解</h3>
+  <ul>
+    <li><strong>误解一：窗口越大，模型记得越牢。</strong>窗口大只代表"装得下"，不代表"用得好"。注意力随长度稀释，有效记忆明显小于标称窗口；业界因此强调"上下文是工作记忆，不是存储"。</li>
+    <li><strong>误解二：上下文 = 模型的记忆。</strong>模型没有跨调用的内在记忆——每生成一次回复，都是基于当前窗口内容重新计算。你昨天告诉它的事，今天没出现在窗口里，它就不知道。</li>
+  </ul>
+</section>
+
+<!-- 5 来源链接 -->
+<section>
+  <h2><span class="idx">5</span>来源链接</h2>
+  <ul class="src">
+    <li><a href="https://baike.baidu.com/item/上下文窗口/67367067" target="_blank">上下文窗口 — 百度百科</a><span class="type">百科词条</span></li>
+    <li><a href="https://www.81.cn/szb_223187/gfbszbxq/index.html?articleid=980232&paperDate=2026-06-09&paperNumber=04" target="_blank">Token：衡量算力的尺度 — 中国军网</a><span class="type">报刊文章</span></li>
+  </ul>
+  <p class="note">检索日期：2026-09-05。以上两个来源相互独立，对"上下文窗口定义""Token 换算率""黑板类比"等关键事实表述一致，交叉验证通过。文中"上下文管理策略"部分主要反映行业通行工程实践，具体数字（如浪费比例估计）为第三方经验值，仅作量级参考。</p>
+</section>
+
+<footer>概念学习资料 · 由 concept-learning-skill 生成 · 2026-09-05</footer>
+</div>
+</body>
+</html>

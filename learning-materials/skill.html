@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Skill（技能）· 概念学习资料</title>
+<style>
+  :root{
+    --primary:#7c3aed; --primary-light:#f5f3ff; --border:#e5e7eb;
+    --text:#1f2937; --muted:#6b7280; --bg:#ffffff; --warn-bg:#fffbeb; --warn-border:#f59e0b;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{font-family:"Microsoft YaHei","PingFang SC","Segoe UI",sans-serif;color:var(--text);background:#f8fafc;line-height:1.8}
+  .page{max-width:860px;margin:0 auto;padding:40px 24px 64px}
+  header{background:var(--bg);border:1px solid var(--border);border-radius:14px;padding:36px 40px;margin-bottom:28px}
+  h1{font-size:30px;color:var(--primary);margin-bottom:6px}
+  .en{color:var(--muted);font-size:15px;margin-bottom:18px}
+  .meta{display:flex;flex-wrap:wrap;gap:10px;font-size:13px}
+  .meta span{background:var(--primary-light);color:var(--primary);border-radius:999px;padding:3px 14px}
+  section{background:var(--bg);border:1px solid var(--border);border-radius:14px;padding:32px 40px;margin-bottom:22px}
+  h2{font-size:20px;color:var(--primary);padding-bottom:10px;border-bottom:2px solid var(--primary-light);margin-bottom:18px}
+  h2 .idx{display:inline-block;background:var(--primary);color:#fff;font-size:13px;border-radius:6px;padding:1px 8px;margin-right:10px;vertical-align:2px}
+  h3{font-size:16px;margin:20px 0 8px}
+  p{margin-bottom:12px}
+  ul,ol{padding-left:24px;margin-bottom:12px}
+  li{margin-bottom:8px}
+  .card{background:var(--primary-light);border-radius:10px;padding:18px 22px;margin:14px 0}
+  .warn{background:var(--warn-bg);border-left:4px solid var(--warn-border);border-radius:8px;padding:16px 20px;margin:14px 0}
+  .vs-table{width:100%;border-collapse:collapse;margin:14px 0;font-size:14.5px}
+  .vs-table th,.vs-table td{border:1px solid var(--border);padding:10px 14px;text-align:left;vertical-align:top}
+  .vs-table th{background:var(--primary-light);color:var(--primary)}
+  .src{list-style:none;padding-left:0}
+  .src li{border:1px solid var(--border);border-radius:10px;padding:14px 18px;margin-bottom:10px}
+  .src a{color:var(--primary);text-decoration:none;font-weight:600}
+  .src a:hover{text-decoration:underline}
+  .src .type{display:inline-block;font-size:12px;color:var(--muted);border:1px solid var(--border);border-radius:999px;padding:1px 10px;margin-left:10px;vertical-align:1px}
+  .note{color:var(--muted);font-size:14px;margin-top:16px;border-top:1px dashed var(--border);padding-top:14px}
+  .term{font-weight:600;color:var(--primary)}
+  footer{text-align:center;color:var(--muted);font-size:13px;margin-top:10px}
+</style>
+</head>
+<body>
+<div class="page">
+
+<header>
+  <h1>Skill（技能）</h1>
+  <div class="en">Skill / Agent Skill / 技能</div>
+  <div class="meta">
+    <span>领域：人工智能 / Agent 能力扩展</span>
+    <span>目标读者：初学者</span>
+    <span>深度：入门到进阶</span>
+    <span>检索日期：2026-09-05</span>
+  </div>
+</header>
+
+<!-- 1 个人解释 -->
+<section>
+  <h2><span class="idx">1</span>个人解释</h2>
+  <p>大模型像一个<strong>博览群书但没进过你们公司的新员工</strong>：它知识渊博、能说会道，却不知道你们的报销流程怎么走、周报要按什么格式写。你当然可以每次都在对话里从头解释一遍，但更省事的做法是把"什么时候做、按什么步骤做、做错了怎么处理"写成一份<strong>操作手册</strong>放进它的抽屉——需要时它自己翻出来照着做。</p>
+  <p>这份"操作手册"就是 Skill：把<strong>做事的方法（know-how）打包成可复用文件</strong>的能力单元，核心是一份 SKILL.md 说明文档，附上可选的脚本、参考资料和模板。它填的是"一条提示词太零散、一个工具又太原子"之间的空档（类比仅在"把流程写成文档供按需查阅"这一点上成立；Skill 并不会改变模型本身的知识和能力）。</p>
+</section>
+
+<!-- 2 核心机制 -->
+<section>
+  <h2><span class="idx">2</span>核心机制</h2>
+
+  <h3>典型结构</h3>
+  <p>一个 Skill 就是一个文件夹，核心是 <span class="term">SKILL.md</span>：开头是 YAML 元数据（名称 name、描述 description），正文用 Markdown 写工作流程与约束；旁边可放可选资源——<span class="term">scripts/</span>（可执行脚本）、<span class="term">references/</span>（按需加载的参考文档）、<span class="term">assets/</span>（输出时使用的模板、图片等）。</p>
+
+  <h3>渐进式披露（Progressive Disclosure）</h3>
+  <div class="card">
+    <strong>第一层</strong>：元数据（name + description，约 100 Token）常驻上下文，供 Agent 判断"要不要用我"。<br>
+    <strong>第二层</strong>：SKILL.md 正文（建议少于 5,000 Token）仅在任务命中后才注入上下文。<br>
+    <strong>第三层</strong>：脚本、参考文档等资源按需读取或执行，不占常驻空间。
+  </div>
+  <p>这种三层设计直接解决了"能力越多、系统提示词爆炸"的问题：就算装了一百个 Skill，平时也只有一百条简短摘要待命，命中哪个才加载哪个。</p>
+
+  <h3>运行流程</h3>
+  <ol>
+    <li><span class="term">发现</span>：Agent 启动时扫描各 Skill 的元数据建立索引。</li>
+    <li><span class="term">选择</span>：用户任务到来时，Agent 根据描述判断应调用哪个 Skill。</li>
+    <li><span class="term">加载</span>：SKILL.md 正文注入上下文，附带的脚本与资源按需使用。</li>
+    <li><span class="term">执行</strong>：按正文指令行动，内部可调用工具、运行脚本，任务完成后卸载正文、只保留元数据。</li>
+  </ol>
+
+  <h3>与 Tool 的本质区别</h3>
+  <p>Anthropic Agent Skills 联合创造者 Barry Zhang 的一句话定义："Skills 是打包了可组合过程性知识的文件集合——说白了，就是些文件夹。"区别在于<strong>判断放在哪</strong>：Tool 是原子的"执行这个动作"（do_this），一次调用、无内部流程；Skill 是"知道怎么做成一类事"（know_how_to_do_class_K），封装了用哪些工具、按什么顺序、出错怎么办的判断，可编排多个工具调用。</p>
+</section>
+
+<!-- 3 应用场景 -->
+<section>
+  <h2><span class="idx">3</span>应用场景</h2>
+  <ul>
+    <li><span class="term">编程助手的能力包</span>：把"按团队规范生成 commit 信息""处理 PDF 提取表格"等固定套路写成 Skill，AI 编程助手在合适时机自动选用，而非每次都靠用户口头交代。</li>
+    <li><span class="term">企业流程封装</span>：把内部周报格式、邮件归档规则、报销标准等"模型不可能知道的公司知识"沉淀为 Skill，团队全员共享，新人 Agent 开箱即用。</li>
+    <li><span class="term">多 Agent 协作</span>：编排者（Orchestrator）把高级能力作为 Skill 分配给子 Agent；单个 Skill 内部再调用底层工具完成每个步骤。</li>
+    <li><span class="term">技能市场</span>：Anthropic 等厂商建立了可分享、可安装的 Skill 生态，用户像装 App 一样给 Agent 增加能力。</li>
+  </ul>
+  <div class="warn"><strong>典型失效情况</strong>：装太多 Skill 会导致选择困惑——面对一堆能力描述相近的 Skill，模型容易选错；Skill 描述写得含糊（如只写"处理文件"）同样会造成误调用。设计原则是给 Agent 完成任务所需的最小技能集。</div>
+</section>
+
+<!-- 4 边界辨析 -->
+<section>
+  <h2><span class="idx">4</span>边界辨析</h2>
+  <table class="vs-table">
+    <tr><th>对比</th><th>A 是……</th><th>B 是……</th></tr>
+    <tr><td><strong>Skill vs Tool / Function</strong></td><td>可复用的能力包：封装"何时、为何、如何组合动作"的判断，可包含多步流程</td><td>原子执行能力：单次函数调用，name + 描述 + 参数 schema，无内部流程</td></tr>
+    <tr><td><strong>Skill vs Prompt</strong></td><td>有元数据、触发条件、资源与生命周期，可被检索、加载、复用</td><td>零散文本片段，无结构、无生命周期，靠人工复制粘贴</td></tr>
+    <tr><td><strong>Skill vs MCP</strong></td><td>Agent 内部的<strong>能力层</strong>：教 Agent 怎么做事</td><td>外部系统的<strong>协议层</strong>：规定 Agent 与工具之间怎么连接、怎么发现工具；两者正交，Skill 里可以调用 MCP 工具</td></tr>
+  </table>
+
+  <h3>适用边界</h3>
+  <p>该用 Skill：某类任务反复出现、做法可沉淀成固定步骤（步骤数可预测但含领域判断）。不该用 Skill：单次性任务（直接写在提示词里）、纯原子操作（注册一个 Tool 即可）、需要跨多个 Skill 的临时编排（那是 Workflow / 编排层的事）。</p>
+
+  <h3>常见误解</h3>
+  <ul>
+    <li><strong>误解一：装了 Skill，模型就"学会"了新知识。</strong>不是。Skill 不改变模型参数，只是把指令和资源按需喂给模型——相当于"开卷考试时递上来的参考书"，模型还是原来那个模型。</li>
+    <li><strong>误解二：Skill 装得越多越强。</strong>恰恰相反：能力描述过多会稀释模型的判断力（skill 选择困惑），好的实践是保持最小必要技能集，按实际缺口逐步增加。</li>
+  </ul>
+</section>
+
+<!-- 5 来源链接 -->
+<section>
+  <h2><span class="idx">5</span>来源链接</h2>
+  <ul class="src">
+    <li><a href="https://atlan.com/know/ai-agent/ai-agent-skills/agent-skills-vs-tools/" target="_blank">Agent Skills vs Tools: How They Differ and Work Together — Atlan</a><span class="type">技术社区</span></li>
+    <li><a href="https://agentmelt.com/blog/ai-agent-skills-vs-mcp-vs-tools" target="_blank">Skills vs MCP vs Tools vs Plugins — Agentmelt</a><span class="type">技术博客</span></li>
+    <li><a href="https://www.aitoolskit.io/learn/what-is-ai-agent-skill-explained-2026" target="_blank">What Is an AI Agent Skill? Reusable Agent Components — AI Tools Kit</a><span class="type">学习指南</span></li>
+  </ul>
+  <p class="note">检索日期：2026-09-05。三个来源相互独立，在"Skill 与 Tool 的层次区别""渐进式披露的三层结构""Skill/MCP 正交关系"等关键事实上表述一致，交叉验证通过。</p>
+</section>
+
+<footer>概念学习资料 · 由 concept-learning-skill 生成 · 2026-09-05</footer>
+</div>
+</body>
+</html>

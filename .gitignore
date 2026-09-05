@@ -1,0 +1,69 @@
+# ============================================================
+# 概念学习仓库 .gitignore
+# 生成日期：2026-09-05
+# ============================================================
+
+# ---------- 敏感信息（最高优先级，切勿提交） ----------
+# 环境变量文件（常用于存放 API Key / 数据库密码等）
+.env
+.env.*
+!.env.example
+
+# 密钥与证书
+*.key
+*.pem
+*.pfx
+*.p12
+*.jks
+
+# 凭证与配置类敏感文件
+*credentials*
+*secret*
+*password*
+secrets.*
+.htpasswd
+
+# 通用密钥/令牌命名模式
+*.token
+*.apikey
+
+# ---------- AI 工具本地数据 ----------
+# 保留 .workbuddy/skills/（Skill 正式存放位置，见 README），
+# 仅排除本地会话数据与记忆日志
+.workbuddy/memory/
+.workbuddy/*.log
+.workbuddy/*.db
+
+# ---------- 编辑器 / IDE ----------
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# ---------- 操作系统 ----------
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# ---------- 临时文件与日志 ----------
+*.log
+*.tmp
+*.bak
+*.cache
+tmp/
+temp/
+
+# ---------- 依赖目录（若未来引入代码工程） ----------
+node_modules/
+__pycache__/
+*.pyc
+.venv/
+venv/
+
+# ---------- 打包与产物压缩包 ----------
+*.zip
+*.tar.gz
+*.7z
+dist/
+build/
