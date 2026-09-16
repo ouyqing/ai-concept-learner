@@ -31,3 +31,7 @@
 
 ## [2026-09-16] health | structural check
 首轮 health 通过：8 sources + 8 concepts + index/overview/log 已同步。
+
+## [2026-09-16] graph | Knowledge graph rebuilt
+
+17 nodes, 23 edges (23 extracted, 0 inferred).

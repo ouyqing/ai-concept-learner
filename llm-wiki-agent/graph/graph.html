@@ -1,0 +1,961 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>LLM Wiki — Knowledge Graph</title>
+<script src="https://unpkg.com/vis-network/standalone/umd/vis-network.min.js"></script>
+<style>
+  body { margin: 0; background: #1a1a2e; font-family: 'Inter', sans-serif; color: #eee; }
+  #graph { width: 100vw; height: 100vh; }
+  #controls {
+    position: fixed; top: 10px; left: 10px; background: rgba(10,10,30,0.88);
+    padding: 14px; border-radius: 10px; z-index: 10; max-width: 280px;
+    backdrop-filter: blur(8px); border: 1px solid rgba(255,255,255,0.08);
+  }
+  #controls h3 { margin: 0 0 10px; font-size: 15px; letter-spacing: 0.5px; }
+  #search { width: 100%; padding: 6px 8px; margin-bottom: 10px; background: #222; color: #eee; border: 1px solid #444; border-radius: 6px; font-size: 13px; }
+  #controls p { margin: 10px 0 0; font-size: 11px; color: #9ea3b0; line-height: 1.5; }
+  .filter-group { margin-top: 10px; padding-top: 8px; border-top: 1px solid rgba(255,255,255,0.1); }
+  .filter-group label { display: block; font-size: 12px; color: #bbb; margin-bottom: 4px; }
+  .slider-row { display: flex; align-items: center; gap: 8px; margin-top: 4px; }
+  .slider-row input[type=range] { flex: 1; accent-color: #FF5722; }
+  .slider-val { font-size: 12px; color: #FF5722; min-width: 28px; text-align: right; font-weight: bold; }
+  .cb-row { display: flex; align-items: center; gap: 6px; font-size: 12px; margin: 3px 0; cursor: pointer; }
+  .cb-row input { accent-color: #FF5722; }
+  #drawer {
+    position: fixed; top: 0; right: 0; width: clamp(480px, 33vw, 720px); max-width: 100vw; height: 100vh;
+    background: rgba(7, 10, 24, 0.96); border-left: 1px solid rgba(255,255,255,0.08);
+    box-shadow: -18px 0 36px rgba(0,0,0,0.35); z-index: 20; display: none;
+    flex-direction: column; backdrop-filter: blur(10px);
+  }
+  #drawer.open { display: flex; }
+  #drawer-header {
+    padding: 18px 18px 12px; border-bottom: 1px solid rgba(255,255,255,0.08);
+  }
+  #drawer-topline {
+    display: flex; align-items: flex-start; justify-content: space-between; gap: 12px;
+  }
+  #drawer-title { margin: 0; font-size: 20px; line-height: 1.2; }
+  #drawer-close {
+    background: transparent; color: #9ea3b0; border: 0; font-size: 24px; line-height: 1;
+    cursor: pointer; padding: 0;
+  }
+  #drawer-meta { margin-top: 8px; font-size: 12px; color: #9ea3b0; }
+  #drawer-path { margin-top: 6px; font-size: 12px; color: #72788a; word-break: break-all; }
+  #drawer-preview {
+    margin-top: 12px; font-size: 13px; color: #d7d9e0; line-height: 1.6;
+  }
+  #drawer-related {
+    padding: 12px 18px 0; font-size: 12px; color: #9ea3b0;
+  }
+  #drawer-related-list {
+    display: flex; flex-wrap: wrap; gap: 8px; margin-top: 8px;
+  }
+  .related-chip {
+    background: rgba(255,255,255,0.08); color: #f1f2f7; border: 1px solid rgba(255,255,255,0.08);
+    border-radius: 999px; font-size: 12px; padding: 5px 10px; cursor: pointer;
+  }
+  #drawer-content {
+    flex: 1; min-height: 0; padding: 14px 18px 18px; overflow: auto;
+  }
+  #drawer-markdown {
+    color: #e6e8ef; font-size: 13px; line-height: 1.72;
+  }
+  #drawer-markdown h1, #drawer-markdown h2, #drawer-markdown h3,
+  #drawer-markdown h4, #drawer-markdown h5, #drawer-markdown h6 {
+    margin: 1.2em 0 0.55em; line-height: 1.3; color: #fff;
+  }
+  #drawer-markdown h1 { font-size: 24px; }
+  #drawer-markdown h2 { font-size: 20px; }
+  #drawer-markdown h3 { font-size: 17px; }
+  #drawer-markdown p { margin: 0 0 0.95em; }
+  #drawer-markdown ul, #drawer-markdown ol { margin: 0 0 1em 1.35em; padding: 0; }
+  #drawer-markdown li { margin: 0.35em 0; }
+  #drawer-markdown hr { border: 0; border-top: 1px solid rgba(255,255,255,0.1); margin: 1.2em 0; }
+  #drawer-markdown blockquote {
+    margin: 0 0 1em; padding: 0.85em 1em; border-left: 3px solid rgba(101, 181, 255, 0.8);
+    background: rgba(255,255,255,0.04); color: #d7d9e0; border-radius: 0 10px 10px 0;
+  }
+  #drawer-markdown pre {
+    margin: 0 0 1em; white-space: pre-wrap; word-break: break-word; line-height: 1.55;
+    font-size: 12px; color: #e6e8ef; background: rgba(255,255,255,0.04);
+    border: 1px solid rgba(255,255,255,0.06); border-radius: 10px; padding: 16px;
+    font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  }
+  #drawer-markdown code {
+    font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+    font-size: 0.92em; background: rgba(255,255,255,0.08); padding: 0.16em 0.38em;
+    border-radius: 6px; color: #ffde91;
+  }
+  #drawer-markdown pre code { background: transparent; padding: 0; color: inherit; border-radius: 0; }
+  #drawer-markdown .wikilink { color: #86c8ff; font-weight: 600; }
+  @media (max-width: 960px) {
+    #drawer { width: 100vw; }
+  }
+  #stats {
+    position: fixed; top: 10px; right: 10px; background: rgba(10,10,30,0.88);
+    padding: 10px 14px; border-radius: 10px; font-size: 12px;
+    backdrop-filter: blur(8px); border: 1px solid rgba(255,255,255,0.08);
+  }
+</style>
+</head>
+<body>
+<div id="controls">
+  <h3>LLM Wiki Graph</h3>
+  <input id="search" type="text" placeholder="Search nodes..." oninput="searchNodes(this.value)">
+  <div><span style="background:#4CAF50;padding:3px 8px;margin:2px;border-radius:3px;font-size:12px">source</span><span style="background:#2196F3;padding:3px 8px;margin:2px;border-radius:3px;font-size:12px">entity</span><span style="background:#FF9800;padding:3px 8px;margin:2px;border-radius:3px;font-size:12px">concept</span><span style="background:#9C27B0;padding:3px 8px;margin:2px;border-radius:3px;font-size:12px">synthesis</span></div>
+  <div class="filter-group">
+    <label>Edge Types</label>
+    <div class="cb-row"><input type="checkbox" id="cb-extracted" checked onchange="applyFilters()"><span style="color:#888">━</span> Extracted (23)</div>
+    <div class="cb-row"><input type="checkbox" id="cb-inferred" checked onchange="applyFilters()"><span style="color:#FF5722">━</span> Inferred (0)</div>
+    <div class="cb-row"><input type="checkbox" id="cb-ambiguous" onchange="applyFilters()"><span style="color:#BDBDBD">━</span> Ambiguous (0)</div>
+  </div>
+  <div class="filter-group">
+    <label>Min Confidence</label>
+    <div class="slider-row">
+      <input type="range" id="conf-slider" min="0" max="100" value="50" oninput="applyFilters()">
+      <span class="slider-val" id="conf-val">0.50</span>
+    </div>
+  </div>
+  <p>Click a node to highlight its connected neighbors and view the markdown on the right. Click the background to restore the full graph.</p>
+</div>
+<div id="graph"></div>
+<aside id="drawer">
+  <div id="drawer-header">
+    <div id="drawer-topline">
+      <h2 id="drawer-title"></h2>
+      <button id="drawer-close" onclick="clearSelection()" aria-label="Close drawer">×</button>
+    </div>
+    <div id="drawer-meta"></div>
+    <div id="drawer-path"></div>
+    <div id="drawer-preview"></div>
+  </div>
+  <div id="drawer-related">
+    Related nodes
+    <div id="drawer-related-list"></div>
+  </div>
+  <div id="drawer-content">
+    <div id="drawer-markdown"></div>
+  </div>
+</aside>
+<div id="stats"></div>
+<script>
+const originalNodes = [
+  {
+    "id": "overview",
+    "label": "overview",
+    "type": "unknown",
+    "color": "#E91E63",
+    "path": "wiki\\overview.md",
+    "markdown": "# Overview — Living Synthesis\n\n> 这一页是 wiki 的活文档：每次 ingest 后审视一次，根据需要增删调整。它不是事实表，而是\"我们目前对这一领域的判断\"。\n\n## 当前主题：AI Agent 工程化与 Python 入门\n\n这一批资料覆盖两条主线：\n\n### 主线一：AI Agent 工程化\n围绕\"如何让 LLM 真正做事\"展开：\n- **Agent**（智能体）—— 把语言能力和做事能力缝合起来的系统类\n- **AgentMemory** —— 让 Agent 突破上下文窗口限制、跨会话保持一致\n- **AgentMemorySystem** —— 把记忆做成可维护管线\n- **AgentSkill** —— 把工作流打包成可复用单元\n- **ContextWindow** —— LLM 的硬约束，与\"记忆\"互补\n- **LLMWikiAgent** —— 用 Agent 模式实现的本地知识库\n\n它们之间的关系：Agent 是主体 → ContextWindow 是工作台 → Memory 是外接硬盘 → Skill 是岗位手册 → LLMWikiAgent 是这套思想的实践样本。\n\n### 主线二：Python 入门（为统计学习打底）\n- **PythonBasics** —— 变量、类型、f-string\n- **PythonContainers** —— list/tuple/dict/set\n\n后续计划：流程控制、函数与模块、数据读写与 pandas。\n\n## 当前判断与假设\n- **记忆是 Agent 体验的核心瓶颈**：模型能力相近时，记忆设计决定产品差异\n- **Skill 化是工程化的关键方向**：把工作流沉淀为可复用资产\n- **窗口≠无限**：Lost in the Middle 提醒我们 RAG 仍是必要的\n\n## 数据缺口\n- Agent Memory 缺少主流框架对比（Mem0 / LangGraph Memory / Zep）\n- Skill 缺少企业级落地案例\n- Python 教程后续章节（流程控制、函数、pandas）尚未入档\n\n## 最近更新\n- 2026-09-16：首批 8 份概念资料入档",
+    "preview": "# Overview — Living Synthesis > 这一页是 wiki 的活文档：每次 ingest 后审视一次，根据需要增删调整。它不是事实表，而是\"我们目前对这一领域的判断\"。 ## 当前主题：AI Agent 工程化与 Python 入门",
+    "group": 0,
+    "value": 1
+  },
+  {
+    "id": "concepts/Agent",
+    "label": "Agent",
+    "type": "concept",
+    "color": "#00BCD4",
+    "path": "wiki\\concepts\\Agent.md",
+    "markdown": "---\ntitle: \"Agent\"\ntype: concept\ntags: [ai-agent, autonomous, planning, tool-use]\nsources: [agent.md, agent-skills.md, agent-memory.md]\nlast_updated: 2026-09-16\n---\n\n## 定义\nAgent（智能体）是<strong>把大模型的\"语言能力\"和\"做事能力\"缝合起来的一类系统</strong>，由四大组件构成：规划、记忆、工具、行动，并以 ReAct（Reason→Act→Observe）循环为核心范式。\n\n## 核心要素\n- **规划**：把目标拆成子任务\n- **记忆**：短期上下文 + 长期事实\n- **工具**：调用外部 API / 文件 / 代码\n- **行动**：执行决定并反馈\n\n## 何时使用 Agent\n适合：可拆解、有可用工具的确定性多步任务（订餐、查询、写报告、数据分析）。\n不适合：纯开放任务（如\"做一家公司\"）、纯对话场景（普通 LLM 即可）。\n\n## 来源\n- [Agent — Source](sources/agent.md)\n- [Agent Skills — Source](sources/agent-skills.md)\n- [Agent Memory — Source](sources/agent-memory.md)\n- [Anthropic: Building Effective Agents](https://www.anthropic.com/research/building-effective-agents)\n- [Lilian Weng: LLM Powered Autonomous Agents](https://lilianweng.github.io/posts/2023-06-23-agent/)",
+    "preview": "## 定义 Agent（智能体）是<strong>把大模型的\"语言能力\"和\"做事能力\"缝合起来的一类系统</strong>，由四大组件构成：规划、记忆、工具、行动，并以 ReAct（Reason→Act→Observe）循环为核心范式。 ## 核心要素",
+    "group": 1,
+    "value": 1
+  },
+  {
+    "id": "concepts/AgentMemory",
+    "label": "AgentMemory",
+    "type": "concept",
+    "color": "#673AB7",
+    "path": "wiki\\concepts\\AgentMemory.md",
+    "markdown": "---\ntitle: \"AgentMemory\"\ntype: concept\ntags: [ai-agent, memory, long-term, context-engineering]\nsources: [agent-memory.md, agent-memory-system.md]\nlast_updated: 2026-09-16\n---\n\n## 定义\nAgent Memory 是<strong>让大模型突破上下文窗口限制、在多次会话中保持一致性的整套机制</strong>——既包括塞进提示词的短期记忆，也包括写入向量数据库或键值库的长期事实。\n\n## 三时间尺度\n| 类型 | 存什么 | 怎么用 |\n|------|--------|--------|\n| 短期 Working | 当前会话对话历史 | 直接拼进提示词 |\n| 长期 Long-term | 用户偏好、过往结论 | 向量化后相似度检索 |\n| 情景 / 语义 / 程序性 | 事件 / 概念 / 步骤 | 按需分类检索 |\n\n## 与易混项\n- **记忆 ≠ 上下文窗口**：窗口是临时内存，记忆是外接硬盘\n- **记忆 ≠ RAG**：RAG 从文档库检索；记忆从\"关于用户/自身的事实库\"检索\n- **记忆 ≠ 微调**：微调改参数，记忆改输入\n\n## 工程要点\n取舍是关键：值得记什么、什么时候记、什么时候忘。\n\n## 来源\n- [Agent Memory — Source](sources/agent-memory.md)\n- [Anthropic: Effective context engineering](https://www.anthropic.com/news/context-engineering)",
+    "preview": "## 定义 Agent Memory 是<strong>让大模型突破上下文窗口限制、在多次会话中保持一致性的整套机制</strong>——既包括塞进提示词的短期记忆，也包括写入向量数据库或键值库的长期事实。 ## 三时间尺度",
+    "group": 4,
+    "value": 5
+  },
+  {
+    "id": "concepts/AgentMemorySystem",
+    "label": "AgentMemorySystem",
+    "type": "concept",
+    "color": "#8BC34A",
+    "path": "wiki\\concepts\\AgentMemorySystem.md",
+    "markdown": "---\ntitle: \"AgentMemorySystem\"\ntype: concept\ntags: [ai-agent, memory, architecture, pipeline]\nsources: [agent-memory-system.md]\nlast_updated: 2026-09-16\n---\n\n## 定义\nMemory System 是把<strong>写入、存储、检索、遗忘四个环节做成可维护管线</strong>的设计，区别于普通 Database——前者关心\"什么时候忘、什么时候记\"，后者关心\"高效存取\"。\n\n## 四类记忆\n1. **事实型**：用户姓名、生日、偏好 → 键值对\n2. **事件型**：上次订过哪家餐厅、踩过哪些坑 → 时间序列\n3. **语义型**：领域知识 → 向量库\n4. **程序型**：操作流程 → 步骤模板\n\n## 五步管线\n抽取 → 分类 → 写入 → 检索 → 遗忘\n\n## 来源\n- [Agent Memory System — Source](sources/agent-memory-system.md)\n- [Mem0 Research](https://mem0.ai/research)",
+    "preview": "## 定义 Memory System 是把<strong>写入、存储、检索、遗忘四个环节做成可维护管线</strong>的设计，区别于普通 Database——前者关心\"什么时候忘、什么时候记\"，后者关心\"高效存取\"。 ## 四类记忆",
+    "group": 2,
+    "value": 3
+  },
+  {
+    "id": "concepts/AgentSkill",
+    "label": "AgentSkill",
+    "type": "concept",
+    "color": "#FF5722",
+    "path": "wiki\\concepts\\AgentSkill.md",
+    "markdown": "---\ntitle: \"AgentSkill\"\ntype: concept\ntags: [ai-agent, skills, claude-skills, capability-package]\nsources: [agent-skills.md]\nlast_updated: 2026-09-16\n---\n\n## 定义\nAgent Skill 是<strong>把\"什么时候做、按什么步骤做、做错了怎么办\"打包成可复用文件</strong>的能力单元，通常以 SKILL.md 说明文档为核心，附可选的 scripts / assets / references。\n\n## 与易混项\n| 易混项 | 核心区别 |\n|--------|----------|\n| Skill vs Tool | Tool 单步原子；Skill 多步工作流 |\n| Skill vs Prompt | Prompt 本次指令；Skill 持久化资产 |\n| Skill vs Fine-tune | Fine-tune 改模型参数；Skill 改输入 |\n\n## 触发判断\nSkill 的 description 字段决定 LLM 是否调用——过多 Skill 会让触发判断变难。\n\n## 来源\n- [Agent Skills — Source](sources/agent-skills.md)\n- [Anthropic: Skills](https://www.anthropic.com/news/skills)\n- [anthropics/skills — GitHub](https://github.com/anthropics/skills)",
+    "preview": "## 定义 Agent Skill 是<strong>把\"什么时候做、按什么步骤做、做错了怎么办\"打包成可复用文件</strong>的能力单元，通常以 SKILL.md 说明文档为核心，附可选的 scripts / assets / references。 ## 与易混项",
+    "group": 3,
+    "value": 3
+  },
+  {
+    "id": "concepts/ContextWindow",
+    "label": "ContextWindow",
+    "type": "concept",
+    "color": "#673AB7",
+    "path": "wiki\\concepts\\ContextWindow.md",
+    "markdown": "---\ntitle: \"ContextWindow\"\ntype: concept\ntags: [llm, context-window, token, context-engineering]\nsources: [llm-context-window.md]\nlast_updated: 2026-09-16\n---\n\n## 定义\nContext Window 是大模型一次对话能塞进的最大信息量，以 token 计量（汉字 ≈ 1-2 token，英文单词 ≈ 1-1.3 token）。它是 LLM 的<strong>硬约束</strong>。\n\n## 窗口里装什么\n- 系统提示词（人格、规则、工具说明）\n- 历史对话\n- 当前用户输入\n- RAG 检索片段、工具调用结果\n\n## 当前主流窗口\n- Claude Sonnet 4：1M token\n- GPT-4.1：1M token\n- Gemini 2.5 Pro：1-2M token\n\n## Lost in the Middle\n窗口大 ≠ 模型能有效用。长上下文中段信息召回率显著下降，头尾记得牢、中间容易丢。\n\n## 来源\n- [LLM Context Window — Source](sources/llm-context-window.md)\n- [Lost in the Middle — Liu et al.](https://arxiv.org/abs/2307.03172)",
+    "preview": "## 定义 Context Window 是大模型一次对话能塞进的最大信息量，以 token 计量（汉字 ≈ 1-2 token，英文单词 ≈ 1-1.3 token）。它是 LLM 的<strong>硬约束</strong>。 ## 窗口里装什么",
+    "group": 4,
+    "value": 4
+  },
+  {
+    "id": "concepts/LLMWikiAgent",
+    "label": "LLMWikiAgent",
+    "type": "concept",
+    "color": "#8BC34A",
+    "path": "wiki\\concepts\\LLMWikiAgent.md",
+    "markdown": "---\ntitle: \"LLMWikiAgent\"\ntype: concept\ntags: [llm, knowledge-base, agent, markdown, graph]\nsources: [llm-wiki.md]\nlast_updated: 2026-09-16\n---\n\n## 定义\nLLM Wiki Agent 是<strong>由 Claude Code 维护的本地知识库系统</strong>，分层：raw/（不可变原始资料）→ wiki/（结构化页面）→ graph/（知识图谱）。\n\n## 五个工作流\n- **ingest**：摄取新资料，写 sources 页面\n- **query**：检索+综合回答\n- **health**：结构健康检查（每会话跑，零 LLM 调用）\n- **lint**：内容质量审计（孤儿页、断链、矛盾）\n- **graph**：构建知识图谱\n\n## Page Format\n每个 wiki 页面使用统一 frontmatter：title / type / tags / sources / last_updated。使用 `[[PageName]]` wikilink。\n\n## 来源\n- [LLM Wiki — Source](sources/llm-wiki.md)\n- [SamurAIGPT/llm-wiki-agent — GitHub](https://github.com/SamurAIGPT/llm-wiki-agent)",
+    "preview": "## 定义 LLM Wiki Agent 是<strong>由 Claude Code 维护的本地知识库系统</strong>，分层：raw/（不可变原始资料）→ wiki/（结构化页面）→ graph/（知识图谱）。 ## 五个工作流",
+    "group": 2,
+    "value": 5
+  },
+  {
+    "id": "concepts/PythonBasics",
+    "label": "PythonBasics",
+    "type": "concept",
+    "color": "#FFC107",
+    "path": "wiki\\concepts\\PythonBasics.md",
+    "markdown": "---\ntitle: \"PythonBasics\"\ntype: concept\ntags: [python, basics, variables, types, dynamic-typing]\nsources: [python-basics.md]\nlast_updated: 2026-09-16\n---\n\n## 定义\nPython 是<strong>动态类型的编程语言</strong>——变量是标签、值是对象，无需提前声明类型。基础语法覆盖 5 种基本类型：int / float / str / bool / None。\n\n## 关键语法\n- 变量赋值：`x = 42`、`name = \"Alice\"`\n- 输入：`name = input(\"提示\")`\n- 输出：`print(f\"你好，{name}\")`\n- f-string：`f\"x 的值是 {x}\"`\n\n## 与易混项\n- 变量 ≠ 对象：`x = 5` 中 x 是名字贴在整数 5 上\n- `==` 在数值上判值等，自定义对象默认判同一性\n\n## 来源\n- [Python Basics — Source](sources/python-basics.md)\n- [Python Docs: Introduction](https://docs.python.org/3/tutorial/introduction.html)",
+    "preview": "## 定义 Python 是<strong>动态类型的编程语言</strong>——变量是标签、值是对象，无需提前声明类型。基础语法覆盖 5 种基本类型：int / float / str / bool / None。 ## 关键语法",
+    "group": 5,
+    "value": 3
+  },
+  {
+    "id": "concepts/PythonContainers",
+    "label": "PythonContainers",
+    "type": "concept",
+    "color": "#FFC107",
+    "path": "wiki\\concepts\\PythonContainers.md",
+    "markdown": "---\ntitle: \"PythonContainers\"\ntype: concept\ntags: [python, containers, list, tuple, dict, set]\nsources: [python-containers.md]\nlast_updated: 2026-09-16\n---\n\n## 定义\nPython 提供四类内置容器：<strong>list（可变长队列）/ tuple（只读队列）/ dict（键值对）/ set（去重桶）</strong>。选错容器效率差 100 倍。\n\n## 对比\n| 类型 | 语法 | 可变 | 有序 | 典型用途 |\n|------|------|------|------|----------|\n| list | [1,2,3] | ✓ | ✓ | 动态数组 |\n| tuple | (1,2,3) | ✗ | ✓ | 不可变记录 |\n| dict | {'a':1} | ✓ | 插入序 | 键值查找 |\n| set | {1,2,3} | ✓ | ✗ | 去重、集合运算 |\n\n## 性能要点\n- list 查找 O(n)\n- dict/set 查找 O(1)\n- 判断\"某元素是否在容器中\"，用 set/dict 更快\n\n## 来源\n- [Python Containers — Source](sources/python-containers.md)\n- [Python Docs: Data Structures](https://docs.python.org/3/tutorial/datastructures.html)",
+    "preview": "## 定义 Python 提供四类内置容器：<strong>list（可变长队列）/ tuple（只读队列）/ dict（键值对）/ set（去重桶）</strong>。选错容器效率差 100 倍。 ## 对比",
+    "group": 5,
+    "value": 3
+  },
+  {
+    "id": "sources/agent-memory-system",
+    "label": "Agent Memory System — Source",
+    "type": "source",
+    "color": "#8BC34A",
+    "path": "wiki\\sources\\agent-memory-system.md",
+    "markdown": "---\ntitle: \"Agent Memory System — Source\"\ntype: source\ntags: [ai-agent, memory, architecture, pipeline, ops]\ndate: 2026-09-16\nsource_file: raw/agent-memory-system.html\nlast_updated: 2026-09-16\n---\n\n## Summary\n概念学习资料《Agent Memory System（记忆系统架构）》。把记忆分成事实/事件/语义/程序四类，并给出五步管线：抽取→分类→写入→检索→遗忘。\n\n## Key Claims\n- Memory System ≠ Database：前者关心\"取舍\"，后者关心\"存取效率\"\n- 写入噪声不抽取会让检索命中率骤降\n- 多 Agent 共享 memory bus 是经验沉淀的关键\n\n## Key Quotes\n> \"没有取舍机制的记忆库会越长越杂，最终像没整理过的邮箱一样难用。\"\n\n## Connections\n- [[AgentMemory]] — 与本资料同主题不同层次\n- [[LLMWikiAgent]] — 体现了\"四类记忆 + 管线\"的实践\n- [[Agent]] — Agent 子系统架构\n\n## Contradictions\n- 无已知矛盾",
+    "preview": "## Summary 概念学习资料《Agent Memory System（记忆系统架构）》。把记忆分成事实/事件/语义/程序四类，并给出五步管线：抽取→分类→写入→检索→遗忘。 ## Key Claims",
+    "group": 2,
+    "value": 4
+  },
+  {
+    "id": "sources/agent-memory",
+    "label": "Agent Memory — Source",
+    "type": "source",
+    "color": "#673AB7",
+    "path": "wiki\\sources\\agent-memory.md",
+    "markdown": "---\ntitle: \"Agent Memory — Source\"\ntype: source\ntags: [ai-agent, memory, context-engineering, rag, long-term]\ndate: 2026-09-16\nsource_file: raw/agent-memory.html\nlast_updated: 2026-09-16\n---\n\n## Summary\n概念学习资料《Agent Memory（智能体记忆）》。解释短期/长期、情景/语义/程序性三时间尺度的记忆分类，以及\"抽取→分类→写入→检索→遗忘\"的工程管线。\n\n## Key Claims\n- 记忆解决\"上下文窗口有限\"导致的一致性问题\n- 长期记忆 ≠ RAG：RAG 从文档库检索，记忆从\"关于用户/自身的事实库\"检索\n- 记忆 ≠ 微调：微调改参数，记忆改输入\n\n## Key Quotes\n> \"记忆会带来噪声与无关信息，反而干扰判断。\"\n\n## Connections\n- [[AgentMemory]] — 概念页\n- [[AgentMemorySystem]] — 进阶架构\n- [[ContextWindow]] — 记忆是窗口的\"外接硬盘\"\n- [[Agent]] — Agent 的关键子系统\n\n## Contradictions\n- 无已知矛盾",
+    "preview": "## Summary 概念学习资料《Agent Memory（智能体记忆）》。解释短期/长期、情景/语义/程序性三时间尺度的记忆分类，以及\"抽取→分类→写入→检索→遗忘\"的工程管线。 ## Key Claims",
+    "group": 4,
+    "value": 5
+  },
+  {
+    "id": "sources/agent-skills",
+    "label": "Agent Skills — Source",
+    "type": "source",
+    "color": "#FF5722",
+    "path": "wiki\\sources\\agent-skills.md",
+    "markdown": "---\ntitle: \"Agent Skills — Source\"\ntype: source\ntags: [ai-agent, skills, claude-skills, capability-package]\ndate: 2026-09-16\nsource_file: raw/agent-skills.html\nlast_updated: 2026-09-16\n---\n\n## Summary\n概念学习资料《Agent Skills（智能体技能）》。解释 Skill 是 Agent 的\"岗位手册\"，由 SKILL.md + 可选附属构成，填\"提示词太零散、工具太原子\"的空档。\n\n## Key Claims\n- Skill = 多步工作流；Tool = 单步原子操作\n- Skill = 持久化资产；Prompt = 本次指令\n- Skill 过多反而损害触发判断与上下文容量\n\n## Key Quotes\n> \"Skill 填的是'一条提示词太零散、一个工具又太原子'之间的空档。\"\n\n## Connections\n- [[AgentSkill]] — 概念页\n- [[Agent]] — Skill 是 Agent 的能力扩展单元\n- [[LLMWikiAgent]] — Skill 化是 Agent 工程化的重要方向\n\n## Contradictions\n- 无已知矛盾",
+    "preview": "## Summary 概念学习资料《Agent Skills（智能体技能）》。解释 Skill 是 Agent 的\"岗位手册\"，由 SKILL.md + 可选附属构成，填\"提示词太零散、工具太原子\"的空档。 ## Key Claims",
+    "group": 3,
+    "value": 4
+  },
+  {
+    "id": "sources/agent",
+    "label": "Agent — Source",
+    "type": "source",
+    "color": "#673AB7",
+    "path": "wiki\\sources\\agent.md",
+    "markdown": "---\ntitle: \"Agent — Source\"\ntype: source\ntags: [ai-agent, autonomous, planning, tool-use, memory]\ndate: 2026-09-16\nsource_file: raw/agent.html\nlast_updated: 2026-09-16\n---\n\n## Summary\n概念学习资料《Agent（智能体）》。把 LLM 与\"做事能力\"缝合起来的系统类，由规划、记忆、工具、行动四大组件构成，并以 ReAct 思考-行动-观察循环作为核心范式。\n\n## Key Claims\n- Agent 是 LLM + 工具 + 长期记忆 + 规划的组合，超越纯对话场景\n- ReAct（Reason→Act→Observe）是核心循环范式\n- 适合可拆解、有可用工具的确定性多步任务；不适合纯开放任务\n\n## Key Quotes\n> \"Agent 是把'语言能力'和'做事能力'缝合起来的一类系统。\"\n\n## Connections\n- [[Agent]] — 主体概念页\n- [[ContextWindow]] — Agent 决策所需工作台\n- [[AgentMemory]] — Agent 跨会话一致性的关键\n- [[AgentSkill]] — Agent 的能力扩展单元\n- [[LLMWikiAgent]] — LLM Wiki 是用 Agent 模式实现的个人知识库\n\n## Contradictions\n- 无已知矛盾",
+    "preview": "## Summary 概念学习资料《Agent（智能体）》。把 LLM 与\"做事能力\"缝合起来的系统类，由规划、记忆、工具、行动四大组件构成，并以 ReAct 思考-行动-观察循环作为核心范式。 ## Key Claims",
+    "group": 4,
+    "value": 9
+  },
+  {
+    "id": "sources/llm-context-window",
+    "label": "LLM Context Window — Source",
+    "type": "source",
+    "color": "#673AB7",
+    "path": "wiki\\sources\\llm-context-window.md",
+    "markdown": "---\ntitle: \"LLM Context Window — Source\"\ntype: source\ntags: [llm, context-window, token, context-engineering]\ndate: 2026-09-16\nsource_file: raw/llm-context-window.html\nlast_updated: 2026-09-16\n---\n\n## Summary\n概念学习资料《LLM Context Window（上下文窗口）》。解释 token 计量、窗口里装什么、当前主流模型的窗口大小，以及 Lost in the Middle 现象。\n\n## Key Claims\n- 窗口以 token 计量（汉字 ≈ 1-2 token，英文单词 ≈ 1-1.3 token）\n- 当前主流大模型窗口在 1M token 量级\n- 长上下文中段信息召回率显著下降（Lost in the Middle）\n- 窗口大 ≠ 无需 RAG\n\n## Key Quotes\n> \"窗口大 ≠ 模型能'有效用'窗口大。\"\n\n## Connections\n- [[ContextWindow]] — 概念页\n- [[AgentMemory]] — 记忆是窗口的\"外接硬盘\"\n- [[Agent]] — Agent 任务的复杂度受窗口约束\n\n## Contradictions\n- 无已知矛盾",
+    "preview": "## Summary 概念学习资料《LLM Context Window（上下文窗口）》。解释 token 计量、窗口里装什么、当前主流模型的窗口大小，以及 Lost in the Middle 现象。 ## Key Claims",
+    "group": 4,
+    "value": 4
+  },
+  {
+    "id": "sources/llm-wiki",
+    "label": "LLM Wiki — Source",
+    "type": "source",
+    "color": "#8BC34A",
+    "path": "wiki\\sources\\llm-wiki.md",
+    "markdown": "---\ntitle: \"LLM Wiki — Source\"\ntype: source\ntags: [llm, knowledge-base, agent, markdown, graph]\ndate: 2026-09-16\nsource_file: raw/llm-wiki.html\nlast_updated: 2026-09-16\n---\n\n## Summary\n概念学习资料《LLM Wiki Agent（知识库代理）》。介绍由 Claude Code 维护的本地知识库系统：raw/ → wiki/ → graph/ 三层，五个工作流（ingest/query/health/lint/graph）。\n\n## Key Claims\n- LLM Wiki 是带索引的持久知识库（含 RAG 而不止 RAG）\n- raw/ 不可变；wiki/ 由 LLM 维护；graph/ 自动生成\n- health 是零 LLM 调用结构性检查，lint 用 LLM 做语义分析\n\n## Key Quotes\n> \"LLM Wiki 是带索引的持久知识库（包含 RAG）。\"\n\n## Connections\n- [[LLMWikiAgent]] — 概念页（与本仓库同名实例）\n- [[AgentMemorySystem]] — LLM Wiki 是 Memory System 的实践参考\n\n## Contradictions\n- 无已知矛盾",
+    "preview": "## Summary 概念学习资料《LLM Wiki Agent（知识库代理）》。介绍由 Claude Code 维护的本地知识库系统：raw/ → wiki/ → graph/ 三层，五个工作流（ingest/query/health/lint/graph）。 ## Key Claims",
+    "group": 2,
+    "value": 3
+  },
+  {
+    "id": "sources/python-basics",
+    "label": "Python Basics — Source",
+    "type": "source",
+    "color": "#FFC107",
+    "path": "wiki\\sources\\python-basics.md",
+    "markdown": "---\ntitle: \"Python Basics — Source\"\ntype: source\ntags: [python, basics, variables, types, f-string]\ndate: 2026-09-16\nsource_file: raw/python-basics.html\nlast_updated: 2026-09-16\n---\n\n## Summary\n概念学习资料《Python 基础语法（变量与基本类型）》。介绍动态类型、5 种基本类型、输入输出与 f-string 格式化。\n\n## Key Claims\n- Python 是动态类型语言，变量即标签、值即对象\n- 5 种基本类型：int / float / str / bool / None\n- == 在数值上判值等，在自定义对象默认判同一性\n\n## Key Quotes\n> \"变量就是标签、值才是对象。\"\n\n## Connections\n- [[PythonBasics]] — 概念页\n- [[PythonContainers]] — 紧接的下半场内容\n\n## Contradictions\n- 无已知矛盾",
+    "preview": "## Summary 概念学习资料《Python 基础语法（变量与基本类型）》。介绍动态类型、5 种基本类型、输入输出与 f-string 格式化。 ## Key Claims",
+    "group": 5,
+    "value": 3
+  },
+  {
+    "id": "sources/python-containers",
+    "label": "Python Containers — Source",
+    "type": "source",
+    "color": "#FFC107",
+    "path": "wiki\\sources\\python-containers.md",
+    "markdown": "---\ntitle: \"Python Containers — Source\"\ntype: source\ntags: [python, containers, list, tuple, dict, set]\ndate: 2026-09-16\nsource_file: raw/python-containers.html\nlast_updated: 2026-09-16\n---\n\n## Summary\n概念学习资料《Python 容器（list/tuple/dict/set）》。对比四类容器的语法、可变性、有序性与典型场景，强调按用途选容器。\n\n## Key Claims\n- list 可变长队列、tuple 只读队列、dict 键值对、set 去重桶\n- dict/set 查找 O(1)；list 查找 O(n)\n- Python 3.7+ dict 保留插入序\n\n## Key Quotes\n> \"用 list 频繁查找 = 慢。\"\n\n## Connections\n- [[PythonBasics]] — 上一节基础类型\n- [[PythonContainers]] — 概念页\n\n## Contradictions\n- 无已知矛盾",
+    "preview": "## Summary 概念学习资料《Python 容器（list/tuple/dict/set）》。对比四类容器的语法、可变性、有序性与典型场景，强调按用途选容器。 ## Key Claims",
+    "group": 5,
+    "value": 3
+  }
+];
+const originalEdges = [
+  {
+    "id": "sources/agent-memory-system->concepts/LLMWikiAgent:EXTRACTED",
+    "from": "sources/agent-memory-system",
+    "to": "concepts/LLMWikiAgent",
+    "type": "EXTRACTED",
+    "color": "#555555",
+    "confidence": 1.0,
+    "title": "",
+    "label": ""
+  },
+  {
+    "id": "sources/agent-memory-system->sources/agent:EXTRACTED",
+    "from": "sources/agent-memory-system",
+    "to": "sources/agent",
+    "type": "EXTRACTED",
+    "color": "#555555",
+    "confidence": 1.0,
+    "title": "",
+    "label": ""
+  },
+  {
+    "id": "sources/agent-memory-system->concepts/AgentMemory:EXTRACTED",
+    "from": "sources/agent-memory-system",
+    "to": "concepts/AgentMemory",
+    "type": "EXTRACTED",
+    "color": "#555555",
+    "confidence": 1.0,
+    "title": "",
+    "label": ""
+  },
+  {
+    "id": "sources/agent-memory->concepts/ContextWindow:EXTRACTED",
+    "from": "sources/agent-memory",
+    "to": "concepts/ContextWindow",
+    "type": "EXTRACTED",
+    "color": "#555555",
+    "confidence": 1.0,
+    "title": "",
+    "label": ""
+  },
+  {
+    "id": "sources/agent-memory->sources/agent:EXTRACTED",
+    "from": "sources/agent-memory",
+    "to": "sources/agent",
+    "type": "EXTRACTED",
+    "color": "#555555",
+    "confidence": 1.0,
+    "title": "",
+    "label": ""
+  },
+  {
+    "id": "sources/agent-memory->concepts/AgentMemory:EXTRACTED",
+    "from": "sources/agent-memory",
+    "to": "concepts/AgentMemory",
+    "type": "EXTRACTED",
+    "color": "#555555",
+    "confidence": 1.0,
+    "title": "",
+    "label": ""
+  },
+  {
+    "id": "sources/agent-memory->concepts/AgentMemorySystem:EXTRACTED",
+    "from": "sources/agent-memory",
+    "to": "concepts/AgentMemorySystem",
+    "type": "EXTRACTED",
+    "color": "#555555",
+    "confidence": 1.0,
+    "title": "",
+    "label": ""
+  },
+  {
+    "id": "sources/agent-skills->concepts/LLMWikiAgent:EXTRACTED",
+    "from": "sources/agent-skills",
+    "to": "concepts/LLMWikiAgent",
+    "type": "EXTRACTED",
+    "color": "#555555",
+    "confidence": 1.0,
+    "title": "",
+    "label": ""
+  },
+  {
+    "id": "sources/agent-skills->sources/agent:EXTRACTED",
+    "from": "sources/agent-skills",
+    "to": "sources/agent",
+    "type": "EXTRACTED",
+    "color": "#555555",
+    "confidence": 1.0,
+    "title": "",
+    "label": ""
+  },
+  {
+    "id": "sources/agent-skills->concepts/AgentSkill:EXTRACTED",
+    "from": "sources/agent-skills",
+    "to": "concepts/AgentSkill",
+    "type": "EXTRACTED",
+    "color": "#555555",
+    "confidence": 1.0,
+    "title": "",
+    "label": ""
+  },
+  {
+    "id": "sources/agent->concepts/LLMWikiAgent:EXTRACTED",
+    "from": "sources/agent",
+    "to": "concepts/LLMWikiAgent",
+    "type": "EXTRACTED",
+    "color": "#555555",
+    "confidence": 1.0,
+    "title": "",
+    "label": ""
+  },
+  {
+    "id": "sources/agent->concepts/ContextWindow:EXTRACTED",
+    "from": "sources/agent",
+    "to": "concepts/ContextWindow",
+    "type": "EXTRACTED",
+    "color": "#555555",
+    "confidence": 1.0,
+    "title": "",
+    "label": ""
+  },
+  {
+    "id": "sources/agent->concepts/AgentMemory:EXTRACTED",
+    "from": "sources/agent",
+    "to": "concepts/AgentMemory",
+    "type": "EXTRACTED",
+    "color": "#555555",
+    "confidence": 1.0,
+    "title": "",
+    "label": ""
+  },
+  {
+    "id": "sources/agent->concepts/AgentSkill:EXTRACTED",
+    "from": "sources/agent",
+    "to": "concepts/AgentSkill",
+    "type": "EXTRACTED",
+    "color": "#555555",
+    "confidence": 1.0,
+    "title": "",
+    "label": ""
+  },
+  {
+    "id": "sources/llm-context-window->concepts/ContextWindow:EXTRACTED",
+    "from": "sources/llm-context-window",
+    "to": "concepts/ContextWindow",
+    "type": "EXTRACTED",
+    "color": "#555555",
+    "confidence": 1.0,
+    "title": "",
+    "label": ""
+  },
+  {
+    "id": "sources/llm-context-window->sources/agent:EXTRACTED",
+    "from": "sources/llm-context-window",
+    "to": "sources/agent",
+    "type": "EXTRACTED",
+    "color": "#555555",
+    "confidence": 1.0,
+    "title": "",
+    "label": ""
+  },
+  {
+    "id": "sources/llm-context-window->concepts/AgentMemory:EXTRACTED",
+    "from": "sources/llm-context-window",
+    "to": "concepts/AgentMemory",
+    "type": "EXTRACTED",
+    "color": "#555555",
+    "confidence": 1.0,
+    "title": "",
+    "label": ""
+  },
+  {
+    "id": "sources/llm-wiki->concepts/LLMWikiAgent:EXTRACTED",
+    "from": "sources/llm-wiki",
+    "to": "concepts/LLMWikiAgent",
+    "type": "EXTRACTED",
+    "color": "#555555",
+    "confidence": 1.0,
+    "title": "",
+    "label": ""
+  },
+  {
+    "id": "sources/llm-wiki->concepts/AgentMemorySystem:EXTRACTED",
+    "from": "sources/llm-wiki",
+    "to": "concepts/AgentMemorySystem",
+    "type": "EXTRACTED",
+    "color": "#555555",
+    "confidence": 1.0,
+    "title": "",
+    "label": ""
+  },
+  {
+    "id": "sources/python-basics->concepts/PythonBasics:EXTRACTED",
+    "from": "sources/python-basics",
+    "to": "concepts/PythonBasics",
+    "type": "EXTRACTED",
+    "color": "#555555",
+    "confidence": 1.0,
+    "title": "",
+    "label": ""
+  },
+  {
+    "id": "sources/python-basics->concepts/PythonContainers:EXTRACTED",
+    "from": "sources/python-basics",
+    "to": "concepts/PythonContainers",
+    "type": "EXTRACTED",
+    "color": "#555555",
+    "confidence": 1.0,
+    "title": "",
+    "label": ""
+  },
+  {
+    "id": "sources/python-containers->concepts/PythonBasics:EXTRACTED",
+    "from": "sources/python-containers",
+    "to": "concepts/PythonBasics",
+    "type": "EXTRACTED",
+    "color": "#555555",
+    "confidence": 1.0,
+    "title": "",
+    "label": ""
+  },
+  {
+    "id": "sources/python-containers->concepts/PythonContainers:EXTRACTED",
+    "from": "sources/python-containers",
+    "to": "concepts/PythonContainers",
+    "type": "EXTRACTED",
+    "color": "#555555",
+    "confidence": 1.0,
+    "title": "",
+    "label": ""
+  }
+].map(edge => ({
+  ...edge,
+  id: edge.id || `${edge.from}->${edge.to}:${edge.type || "INFERRED"}`,
+}));
+const nodes = new vis.DataSet(originalNodes);
+const edges = new vis.DataSet(originalEdges);
+const adjacency = new Map();
+const searchInput = document.getElementById("search");
+const stats = document.getElementById("stats");
+const controls = {
+  extracted: document.getElementById("cb-extracted"),
+  inferred: document.getElementById("cb-inferred"),
+  ambiguous: document.getElementById("cb-ambiguous"),
+  confSlider: document.getElementById("conf-slider"),
+  confValue: document.getElementById("conf-val"),
+};
+const nodeMap = new Map(originalNodes.map(node => [node.id, node]));
+let activeNodeId = null;
+
+function hexToRgba(color, alpha) {
+  if (!color) return `rgba(255, 255, 255, ${alpha})`;
+  const normalized = color.replace("#", "");
+  const value = normalized.length === 3
+    ? normalized.split("").map(ch => ch + ch).join("")
+    : normalized;
+  const intValue = Number.parseInt(value, 16);
+  const r = (intValue >> 16) & 255;
+  const g = (intValue >> 8) & 255;
+  const b = intValue & 255;
+  return `rgba(${r}, ${g}, ${b}, ${alpha})`;
+}
+
+function escapeHtml(text) {
+  return (text || "")
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;");
+}
+
+function stripFrontmatter(markdown) {
+  return (markdown || "").replace(/^---\n[\s\S]*?\n---\n?/, "");
+}
+
+function renderInlineMarkdown(text) {
+  let html = escapeHtml(text);
+  html = html.replace(/\[\[([^\]]+)\]\]/g, '<span class="wikilink">[[$1]]</span>');
+  html = html.replace(/`([^`]+)`/g, "<code>$1</code>");
+  html = html.replace(/\*\*([^*]+)\*\*/g, "<strong>$1</strong>");
+  html = html.replace(/\*([^*]+)\*/g, "<em>$1</em>");
+  return html;
+}
+
+function renderMarkdown(markdown) {
+  const lines = stripFrontmatter(markdown).split(/\r?\n/);
+  const html = [];
+  let paragraph = [];
+  let listType = null;
+  let listItems = [];
+  let quoteLines = [];
+  let inCodeBlock = false;
+  let codeLines = [];
+
+  function flushParagraph() {
+    if (!paragraph.length) return;
+    html.push(`<p>${renderInlineMarkdown(paragraph.join(" "))}</p>`);
+    paragraph = [];
+  }
+
+  function flushList() {
+    if (!listType || !listItems.length) return;
+    const items = listItems.map(item => `<li>${renderInlineMarkdown(item)}</li>`).join("");
+    html.push(`<${listType}>${items}</${listType}>`);
+    listType = null;
+    listItems = [];
+  }
+
+  function flushQuote() {
+    if (!quoteLines.length) return;
+    html.push(`<blockquote>${quoteLines.map(line => renderInlineMarkdown(line)).join("<br>")}</blockquote>`);
+    quoteLines = [];
+  }
+
+  function flushCode() {
+    if (!codeLines.length) {
+      html.push("<pre><code></code></pre>");
+      return;
+    }
+    html.push(`<pre><code>${escapeHtml(codeLines.join("\n"))}</code></pre>`);
+    codeLines = [];
+  }
+
+  for (const rawLine of lines) {
+    const line = rawLine.replace(/\t/g, "    ");
+    const trimmed = line.trim();
+
+    if (trimmed.startsWith("```")) {
+      flushParagraph();
+      flushList();
+      flushQuote();
+      if (inCodeBlock) {
+        flushCode();
+        inCodeBlock = false;
+      } else {
+        inCodeBlock = true;
+      }
+      continue;
+    }
+
+    if (inCodeBlock) {
+      codeLines.push(rawLine);
+      continue;
+    }
+
+    if (!trimmed) {
+      flushParagraph();
+      flushList();
+      flushQuote();
+      continue;
+    }
+
+    const headingMatch = trimmed.match(/^(#(1, 6))\s+(.+)$/);
+    if (headingMatch) {
+      flushParagraph();
+      flushList();
+      flushQuote();
+      const level = headingMatch[1].length;
+      html.push(`<h${level}>${renderInlineMarkdown(headingMatch[2])}</h${level}>`);
+      continue;
+    }
+
+    if (/^(-(3,)|\*(3,))$/.test(trimmed)) {
+      flushParagraph();
+      flushList();
+      flushQuote();
+      html.push("<hr>");
+      continue;
+    }
+
+    const quoteMatch = trimmed.match(/^>\s?(.*)$/);
+    if (quoteMatch) {
+      flushParagraph();
+      flushList();
+      quoteLines.push(quoteMatch[1]);
+      continue;
+    }
+    flushQuote();
+
+    const unorderedMatch = trimmed.match(/^[-*]\s+(.+)$/);
+    if (unorderedMatch) {
+      flushParagraph();
+      if (listType && listType !== "ul") flushList();
+      listType = "ul";
+      listItems.push(unorderedMatch[1]);
+      continue;
+    }
+
+    const orderedMatch = trimmed.match(/^\d+\.\s+(.+)$/);
+    if (orderedMatch) {
+      flushParagraph();
+      if (listType && listType !== "ol") flushList();
+      listType = "ol";
+      listItems.push(orderedMatch[1]);
+      continue;
+    }
+
+    flushList();
+    paragraph.push(trimmed);
+  }
+
+  if (inCodeBlock) flushCode();
+  flushParagraph();
+  flushList();
+  flushQuote();
+  return html.join("");
+}
+
+function rebuildAdjacency(filteredEdges) {
+  adjacency.clear();
+  for (const node of originalNodes) {
+    adjacency.set(node.id, new Set());
+  }
+  for (const edge of filteredEdges) {
+    if (!adjacency.has(edge.from)) adjacency.set(edge.from, new Set());
+    if (!adjacency.has(edge.to)) adjacency.set(edge.to, new Set());
+    adjacency.get(edge.from).add(edge.to);
+    adjacency.get(edge.to).add(edge.from);
+  }
+}
+
+function currentEdgeState() {
+  const minConf = parseInt(controls.confSlider.value, 10) / 100;
+  controls.confValue.textContent = minConf.toFixed(2);
+  return {
+    showExtracted: controls.extracted.checked,
+    showInferred: controls.inferred.checked,
+    showAmbiguous: controls.ambiguous.checked,
+    minConf,
+  };
+}
+
+function passesEdgeFilters(edge, edgeState) {
+  const typeOk = (edge.type === "EXTRACTED" && edgeState.showExtracted)
+    || (edge.type === "INFERRED" && edgeState.showInferred)
+    || (edge.type === "AMBIGUOUS" && edgeState.showAmbiguous);
+  const confOk = (edge.confidence ?? 1.0) >= edgeState.minConf;
+  return typeOk && confOk;
+}
+
+function searchNodes(q) {
+  applyFilters(q, activeNodeId);
+}
+
+function clearSelection() {
+  activeNodeId = null;
+  closeDrawer();
+  applyFilters(searchInput.value, null);
+}
+
+function closeDrawer() {
+  document.getElementById("drawer").classList.remove("open");
+}
+
+function openDrawer(node, relatedIds) {
+  document.getElementById("drawer").classList.add("open");
+  document.getElementById("drawer-title").textContent = node.label;
+  const communityText = Number.isInteger(node.group) && node.group >= 0 ? ` · community ${node.group}` : "";
+  document.getElementById("drawer-meta").textContent = `${node.type}${communityText}`;
+  document.getElementById("drawer-path").textContent = node.path;
+  document.getElementById("drawer-preview").textContent = node.preview || "";
+  document.getElementById("drawer-markdown").innerHTML = renderMarkdown(node.markdown || "");
+
+  const relatedList = document.getElementById("drawer-related-list");
+  relatedList.innerHTML = "";
+  const relatedNodes = originalNodes
+    .filter(item => relatedIds.has(item.id) && item.id !== node.id)
+    .sort((a, b) => a.label.localeCompare(b.label));
+
+  if (relatedNodes.length === 0) {
+    const empty = document.createElement("span");
+    empty.textContent = "No directly connected nodes";
+    relatedList.appendChild(empty);
+    return;
+  }
+
+  for (const related of relatedNodes) {
+    const chip = document.createElement("button");
+    chip.className = "related-chip";
+    chip.textContent = related.label;
+    chip.onclick = () => focusNode(related.id);
+    relatedList.appendChild(chip);
+  }
+}
+
+function applyFilters(query = searchInput.value, selectedNodeId = activeNodeId) {
+  const lower = (query || "").trim().toLowerCase();
+  const edgeState = currentEdgeState();
+  const filteredEdges = originalEdges.filter(edge => passesEdgeFilters(edge, edgeState));
+  rebuildAdjacency(filteredEdges);
+
+  const relatedIds = selectedNodeId
+    ? new Set([selectedNodeId, ...(adjacency.get(selectedNodeId) || [])])
+    : null;
+  const filteredNodeIds = new Set();
+  for (const edge of filteredEdges) {
+    filteredNodeIds.add(edge.from);
+    filteredNodeIds.add(edge.to);
+  }
+
+  let visibleNodeCount = 0;
+  const nodeUpdates = originalNodes.map(node => {
+    const matchesSearch = !lower || node.label.toLowerCase().includes(lower);
+    const isActive = selectedNodeId === node.id;
+    const isConnected = filteredNodeIds.has(node.id);
+    const isRelated = !relatedIds || relatedIds.has(node.id);
+    const hidden = !selectedNodeId && !lower && !isConnected;
+    const emphasized = matchesSearch && isRelated && (isConnected || !!lower || isActive);
+
+    if (!hidden) {
+      visibleNodeCount += 1;
+    }
+
+    return {
+      id: node.id,
+      hidden,
+      color: {
+        background: emphasized ? node.color : hexToRgba(node.color, hidden ? 0.05 : 0.14),
+        border: emphasized ? hexToRgba(node.color, 0.96) : hexToRgba(node.color, hidden ? 0.08 : 0.22),
+        highlight: { background: node.color, border: hexToRgba(node.color, 1) },
+        hover: { background: node.color, border: hexToRgba(node.color, 1) },
+      },
+      font: {
+        color: emphasized ? "#f2f3f8" : hidden ? "rgba(242,243,248,0.08)" : "rgba(242,243,248,0.2)",
+      },
+      borderWidth: isActive ? 5 : 2,
+      size: isActive ? 18 : 12,
+    };
+  });
+
+  const edgeUpdates = originalEdges.map(edge => {
+    const enabled = passesEdgeFilters(edge, edgeState);
+    if (!enabled) {
+      return { id: edge.id, hidden: true };
+    }
+
+    const matchesSearch = !lower
+      || nodeMap.get(edge.from)?.label.toLowerCase().includes(lower)
+      || nodeMap.get(edge.to)?.label.toLowerCase().includes(lower);
+    const isRelated = !relatedIds || relatedIds.has(edge.from) || relatedIds.has(edge.to);
+    const touchesActive = !!selectedNodeId && (edge.from === selectedNodeId || edge.to === selectedNodeId);
+    const emphasized = matchesSearch && isRelated;
+
+    return {
+      id: edge.id,
+      hidden: false,
+      width: touchesActive ? 2.8 : emphasized ? 1.2 : 0.6,
+      color: emphasized ? edge.color : hexToRgba(edge.color, 0.08),
+    };
+  });
+
+  nodes.update(nodeUpdates);
+  edges.update(edgeUpdates);
+
+  if (selectedNodeId) {
+    const activeNode = nodeMap.get(selectedNodeId);
+    if (activeNode) {
+      openDrawer(activeNode, relatedIds || new Set([selectedNodeId]));
+    }
+  }
+
+  const focusSuffix = selectedNodeId && nodeMap.get(selectedNodeId)
+    ? ` · focused: ${nodeMap.get(selectedNodeId).label}`
+    : "";
+  stats.textContent = `${visibleNodeCount} nodes · ${filteredEdges.length} edges${focusSuffix}`;
+}
+
+const container = document.getElementById("graph");
+
+// Adaptive physics based on graph size
+const nodeCount = originalNodes.length;
+const gravConst = nodeCount > 80 ? -8000 : nodeCount > 30 ? -5000 : -2000;
+const springLen = nodeCount > 80 ? 250 : nodeCount > 30 ? 200 : 150;
+
+const network = new vis.Network(container, { nodes, edges }, {
+  nodes: {
+    shape: "dot",
+    font: { color: "#ddd", size: 12, strokeWidth: 3, strokeColor: "#111" },
+    borderWidth: 1.5,
+    scaling: {
+      min: 8,
+      max: 40,
+      label: { enabled: true, min: 10, max: 20, drawThreshold: 6, maxVisible: 24 },
+    },
+  },
+  edges: {
+    width: 0.8,
+    smooth: { type: "continuous" },
+    arrows: { to: { enabled: true, scaleFactor: 0.4 } },
+    color: { inherit: false },
+    hoverWidth: 2,
+  },
+  physics: {
+    stabilization: { iterations: 250, updateInterval: 25, fit: true },
+    barnesHut: { gravitationalConstant: gravConst, springLength: springLen, springConstant: 0.02, damping: 0.15 },
+    minVelocity: 0.75,
+  },
+  interaction: { hover: true, tooltipDelay: 150, hideEdgesOnDrag: true, hideEdgesOnZoom: true },
+});
+
+// Ensure the graph fits the viewport after physics stabilization
+network.once("stabilizationIterationsDone", function () {
+  network.fit({ animation: { duration: 400, easingFunction: "easeInOutQuad" } });
+});
+
+function focusNode(nodeId) {
+  activeNodeId = nodeId;
+  applyFilters(searchInput.value, nodeId);
+  const node = nodeMap.get(nodeId) || nodes.get(nodeId);
+  const relatedIds = new Set([nodeId, ...(adjacency.get(nodeId) || [])]);
+  openDrawer(node, relatedIds);
+  network.focus(nodeId, {
+    scale: 1.1,
+    animation: { duration: 300, easingFunction: "easeInOutQuad" },
+  });
+}
+
+network.on("click", params => {
+  if (params.nodes.length > 0) {
+    focusNode(params.nodes[0]);
+  } else {
+    clearSelection();
+  }
+});
+
+applyFilters();
+</script>
+</body>
+</html>
