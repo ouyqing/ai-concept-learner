@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<title>LLM Wiki · 概念学习资料</title>
+<style>:root{--p:#ea580c;--pl:#fff7ed;--b:#e5e7eb;--t:#1f2937;--m:#6b7280}*{box-sizing:border-box;margin:0;padding:0}body{font-family:"Microsoft YaHei","PingFang SC",sans-serif;color:var(--t);background:#f8fafc;line-height:1.8}.page{max-width:860px;margin:0 auto;padding:40px 24px 64px}header{background:#fff;border:1px solid var(--b);border-radius:14px;padding:36px 40px;margin-bottom:28px}h1{font-size:30px;color:var(--p);margin-bottom:6px}.en{color:var(--m);font-size:15px;margin-bottom:18px}.meta{display:flex;flex-wrap:wrap;gap:10px;font-size:13px}.meta span{background:var(--pl);color:var(--p);border-radius:999px;padding:3px 14px}section{background:#fff;border:1px solid var(--b);border-radius:14px;padding:32px 40px;margin-bottom:22px}h2{font-size:20px;color:var(--p);padding-bottom:10px;border-bottom:2px solid var(--pl);margin-bottom:18px}h2 .idx{display:inline-block;background:var(--p);color:#fff;font-size:13px;border-radius:6px;padding:1px 8px;margin-right:10px;vertical-align:2px}h3{font-size:16px;margin:20px 0 8px}p,li{margin-bottom:12px}ul,ol{padding-left:24px}.card{background:var(--pl);border-radius:10px;padding:18px 22px;margin:14px 0}.vs-table{width:100%;border-collapse:collapse;margin:14px 0;font-size:14.5px}.vs-table th,.vs-table td{border:1px solid var(--b);padding:10px 14px;text-align:left;vertical-align:top}.vs-table th{background:var(--pl);color:var(--p)}.src{list-style:none;padding-left:0}.src li{border:1px solid var(--b);border-radius:10px;padding:14px 18px;margin-bottom:10px}.src a{color:var(--p);text-decoration:none;font-weight:600}.src .type{display:inline-block;font-size:12px;color:var(--m);border:1px solid var(--b);border-radius:999px;padding:1px 10px;margin-left:10px}.term{font-weight:600;color:var(--p)}footer{text-align:center;color:var(--m);font-size:13px;margin-top:10px}</style>
+</head>
+<body>
+<div class="page">
+<header>
+  <h1>LLM Wiki Agent（知识库代理）</h1>
+  <div class="en">llm-wiki / Knowledge Base Agent</div>
+  <div class="meta">
+    <span>领域：AI Agent / 个人知识管理</span>
+    <span>读者：入门</span>
+    <span>深度：工具级</span>
+    <span>检索日期：2026-09-16</span>
+  </div>
+</header>
+
+<section>
+  <h2><span class="idx">1</span>个人解释</h2>
+  <p>把 LLM Wiki 想成一位<strong>专管资料室的图书管理员</strong>：你丢给他一摞文档（论文、网页、笔记），他会把每份做摘要、抽出关键观点、按主题分类归档；以后你想查"什么是 RAG"，他翻目录、查条目、组织成一段带原文引用的答案——全部在 Markdown 文件里完成。</p>
+  <p>它是<strong>由 Claude Code 维护的本地知识库系统</strong>，分层：raw/（原始资料）→ wiki/（结构化页面）→ graph/（知识图谱）（<em>类比成立的前提是承认"由 LLM 自动维护"意味着资料质量受模型能力约束</em>）。</p>
+</section>
+
+<section>
+  <h2><span class="idx">2</span>核心机制</h2>
+  <h3>三层资料</h3>
+  <div class="card">
+    <strong>① raw/</strong> 不可变原始资料（PDF/MD/HTML）→ <strong>② wiki/</strong> 结构化页面（sources/entities/concepts/syntheses）→ <strong>③ graph/</strong> 知识图谱（节点 + 关系）
+  </div>
+  <h3>五个工作流</h3>
+  <ul>
+    <li><span class="term">ingest</span>：摄取新资料，写 sources 页面</li>
+    <li><span class="term">query</span>：检索+综合回答</li>
+    <li><span class="term">health</span>：结构健康检查（每会话跑，零 LLM 调用）</li>
+    <li><span class="term">lint</span>：内容质量审计（孤儿页、断链、矛盾）</li>
+    <li><span class="term">graph</span>：构建知识图谱（vis.js 可视化）</li>
+  </ul>
+</section>
+
+<section>
+  <h2><span class="idx">3</span>应用场景</h2>
+  <ol>
+    <li><strong>学术研究</strong>：把 50 篇 arXiv 论文入档，按方法/数据集/结果对比</li>
+    <li><strong>个人读书笔记</strong>：导入 kindle clippings → 自动主题归类</li>
+    <li><strong>团队 wiki</strong>：把会议记录、决策文档、需求文档统一索引</li>
+    <li><strong>产品调研</strong>：批量分析竞品文档，抽共同关注点</li>
+  </ol>
+</section>
+
+<section>
+  <h2><span class="idx">4</span>边界辨析</h2>
+  <table class="vs-table">
+    <tr><th>易混项</th><th>核心区别</th></tr>
+    <tr><td>LLM Wiki vs Notion</td><td>Notion 手动整理；LLM Wiki 自动摘要+链接+图谱</td></tr>
+    <tr><td>LLM Wiki vs RAG</td><td>RAG 是检索增强生成；LLM Wiki 是<strong>带索引的持久知识库</strong>（包含 RAG）</td></tr>
+    <tr><td>LLM Wiki vs Vector DB</td><td>Vector DB 只存向量；LLM Wiki 存<strong>可读的 Markdown 页面</strong></td></tr>
+  </table>
+</section>
+
+<section>
+  <h2><span class="idx">5</span>来源链接</h2>
+  <ul class="src">
+    <li><a href="https://github.com/SamurAIGPT/llm-wiki-agent" target="_blank">SamurAIGPT/llm-wiki-agent — GitHub</a><span class="type">开源仓库</span><br>官方仓库，本仓库内即其克隆</li>
+    <li><a href="https://en.wikipedia.org/wiki/Knowledge_base" target="_blank">Knowledge Base — Wikipedia</a><span class="type">百科</span></li>
+  </ul>
+  <p style="color:var(--m);font-size:14px;margin-top:16px;border-top:1px dashed var(--b);padding-top:14px">本资料由 concept-learning-skill 生成，已人工核查。检索日期：2026-09-16。</p>
+</section>
+<footer>Concept Learning Materials · llm-wiki.html</footer>
+</div>
+</body>
+</html>

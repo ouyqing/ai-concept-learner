@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<title>Agent Skills · 概念学习资料</title>
+<style>:root{--p:#059669;--pl:#ecfdf5;--b:#e5e7eb;--t:#1f2937;--m:#6b7280;--w:#fffbeb;--wb:#f59e0b}*{box-sizing:border-box;margin:0;padding:0}body{font-family:"Microsoft YaHei","PingFang SC",sans-serif;color:var(--t);background:#f8fafc;line-height:1.8}.page{max-width:860px;margin:0 auto;padding:40px 24px 64px}header{background:#fff;border:1px solid var(--b);border-radius:14px;padding:36px 40px;margin-bottom:28px}h1{font-size:30px;color:var(--p);margin-bottom:6px}.en{color:var(--m);font-size:15px;margin-bottom:18px}.meta{display:flex;flex-wrap:wrap;gap:10px;font-size:13px}.meta span{background:var(--pl);color:var(--p);border-radius:999px;padding:3px 14px}section{background:#fff;border:1px solid var(--b);border-radius:14px;padding:32px 40px;margin-bottom:22px}h2{font-size:20px;color:var(--p);padding-bottom:10px;border-bottom:2px solid var(--pl);margin-bottom:18px}h2 .idx{display:inline-block;background:var(--p);color:#fff;font-size:13px;border-radius:6px;padding:1px 8px;margin-right:10px;vertical-align:2px}h3{font-size:16px;margin:20px 0 8px}p,li{margin-bottom:12px}ul,ol{padding-left:24px}.card{background:var(--pl);border-radius:10px;padding:18px 22px;margin:14px 0}.warn{background:var(--w);border-left:4px solid var(--wb);border-radius:8px;padding:16px 20px;margin:14px 0}.vs-table{width:100%;border-collapse:collapse;margin:14px 0;font-size:14.5px}.vs-table th,.vs-table td{border:1px solid var(--b);padding:10px 14px;text-align:left;vertical-align:top}.vs-table th{background:var(--pl);color:var(--p)}.src{list-style:none;padding-left:0}.src li{border:1px solid var(--b);border-radius:10px;padding:14px 18px;margin-bottom:10px}.src a{color:var(--p);text-decoration:none;font-weight:600}.src .type{display:inline-block;font-size:12px;color:var(--m);border:1px solid var(--b);border-radius:999px;padding:1px 10px;margin-left:10px}.term{font-weight:600;color:var(--p)}footer{text-align:center;color:var(--m);font-size:13px;margin-top:10px}</style>
+</head>
+<body>
+<div class="page">
+<header>
+  <h1>Agent Skills（智能体技能）</h1>
+  <div class="en">Skill / Claude Skills / Capability Package</div>
+  <div class="meta">
+    <span>领域：AI Agent / 工程化</span>
+    <span>读者：入门到进阶</span>
+    <span>深度：实操</span>
+    <span>检索日期：2026-09-16</span>
+  </div>
+</header>
+
+<section>
+  <h2><span class="idx">1</span>个人解释</h2>
+  <p>想象给你的"只有 7 秒记忆的朋友"配一本<strong>岗位操作手册</strong>：他不知道你们公司报销怎么走，你就把流程写进一本《财务部报销手册》，需要时他翻开照做。Skill 就是 Agent 的"岗位手册"——把"什么时候做、按什么步骤做、做错了怎么办"打包成一份可复用的能力单元。</p>
+  <p>Skill 填的是"<strong>一条提示词太零散、一个工具又太原子</strong>"之间的空档（<em>类比在"按需查阅的工作手册"这一点上成立；Skill 不改变模型本身的能力</em>）。</p>
+</section>
+
+<section>
+  <h2><span class="idx">2</span>核心机制</h2>
+  <h3>典型结构</h3>
+  <p>一个 Skill 就是一个文件夹，核心是 <span class="term">SKILL.md</span>：YAML 元数据（name + description）+ Markdown 工作流说明。可选附属：scripts/、assets/、references/。</p>
+  <h3>三段式工作流</h3>
+  <div class="card">
+    <strong>① 触发判断</strong>（LLM 看 description 决定调不调用）→ <strong>② 加载内容</strong>（按需把 SKILL.md 全文或部分塞进 prompt）→ <strong>③ 执行</strong>（按工作流跑脚本或对话）
+  </div>
+</section>
+
+<section>
+  <h2><span class="idx">3</span>应用场景</h2>
+  <ol>
+    <li><strong>领域工作流</strong>："分析销售数据"、"生成周报"、"排查线上告警"</li>
+    <li><strong>角色化操作</strong>：财务报销、法务合同初稿、HR 入职流程</li>
+    <li><strong>项目专属</strong>：某个研究项目的实验记录模板、文献综述模板</li>
+    <li><strong>个人偏好</strong>：用你的写作风格改稿、用你的笔记结构整理材料</li>
+  </ol>
+</section>
+
+<section>
+  <h2><span class="idx">4</span>边界辨析</h2>
+  <table class="vs-table">
+    <tr><th>易混项</th><th>核心区别</th></tr>
+    <tr><td>Skill vs Tool</td><td>Tool 是<strong>单步原子操作</strong>（如"查天气"）；Skill 是<strong>多步工作流</strong>（如"查三天天气+给穿衣建议"）</td></tr>
+    <tr><td>Skill vs Prompt</td><td>Prompt 是<strong>本次对话指令</strong>；Skill 是<strong>持久化资产</strong>，任何会话都能调用</td></tr>
+    <tr><td>Skill vs Fine-tune</td><td>Fine-tune 改模型参数；Skill 改输入内容，不动模型</td></tr>
+  </table>
+  <div class="warn">
+    <strong>常见误解：</strong>"Skill 越多 Agent 越聪明"——错。Skill 是<strong>任务模板</strong>而非通用能力；过多 Skill 会让触发判断变难、上下文变长。要按"使用频率 + 复用价值"取舍。
+  </div>
+</section>
+
+<section>
+  <h2><span class="idx">5</span>来源链接</h2>
+  <ul class="src">
+    <li><a href="https://www.anthropic.com/news/skills" target="_blank">Skills — Anthropic</a><span class="type">官方发布</span><br>Claude Skills 的官方介绍：渐进式披露、SKILL.md 规范</li>
+    <li><a href="https://docs.claude.com/en/docs/agents-and-tools/agent-skills/overview" target="_blank">Agent Skills Overview — Claude Docs</a><span class="type">官方文档</span></li>
+    <li><a href="https://github.com/anthropics/skills" target="_blank">anthropics/skills — GitHub</a><span class="type">开源仓库</span><br>官方 Skills 示例库</li>
+  </ul>
+  <p style="color:var(--m);font-size:14px;margin-top:16px;border-top:1px dashed var(--b);padding-top:14px">本资料由 concept-learning-skill 生成，已人工核查。检索日期：2026-09-16。</p>
+</section>
+<footer>Concept Learning Materials · agent-skills.html</footer>
+</div>
+</body>
+</html>

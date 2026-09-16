@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<title>Python Containers · 概念学习资料</title>
+<style>:root{--p:#7e22ce;--pl:#faf5ff;--b:#e5e7eb;--t:#1f2937;--m:#6b7280}*{box-sizing:border-box;margin:0;padding:0}body{font-family:"Microsoft YaHei","PingFang SC",sans-serif;color:var(--t);background:#f8fafc;line-height:1.8}.page{max-width:860px;margin:0 auto;padding:40px 24px 64px}header{background:#fff;border:1px solid var(--b);border-radius:14px;padding:36px 40px;margin-bottom:28px}h1{font-size:30px;color:var(--p);margin-bottom:6px}.en{color:var(--m);font-size:15px;margin-bottom:18px}.meta{display:flex;flex-wrap:wrap;gap:10px;font-size:13px}.meta span{background:var(--pl);color:var(--p);border-radius:999px;padding:3px 14px}section{background:#fff;border:1px solid var(--b);border-radius:14px;padding:32px 40px;margin-bottom:22px}h2{font-size:20px;color:var(--p);padding-bottom:10px;border-bottom:2px solid var(--pl);margin-bottom:18px}h2 .idx{display:inline-block;background:var(--p);color:#fff;font-size:13px;border-radius:6px;padding:1px 8px;margin-right:10px;vertical-align:2px}h3{font-size:16px;margin:20px 0 8px}p,li{margin-bottom:12px}ul,ol{padding-left:24px}.card{background:var(--pl);border-radius:10px;padding:18px 22px;margin:14px 0;white-space:pre-wrap;font-family:Consolas,monospace;font-size:14px}.vs-table{width:100%;border-collapse:collapse;margin:14px 0;font-size:14.5px}.vs-table th,.vs-table td{border:1px solid var(--b);padding:10px 14px;text-align:left;vertical-align:top}.vs-table th{background:var(--pl);color:var(--p)}.src{list-style:none;padding-left:0}.src li{border:1px solid var(--b);border-radius:10px;padding:14px 18px;margin-bottom:10px}.src a{color:var(--p);text-decoration:none;font-weight:600}.src .type{display:inline-block;font-size:12px;color:var(--m);border:1px solid var(--b);border-radius:999px;padding:1px 10px;margin-left:10px}.term{font-weight:600;color:var(--p)}footer{text-align:center;color:var(--m);font-size:13px;margin-top:10px}</style>
+</head>
+<body>
+<div class="page">
+<header>
+  <h1>Python 容器（list/tuple/dict/set）</h1>
+  <div class="en">Python Containers / Data Structures</div>
+  <div class="meta">
+    <span>领域：编程入门</span>
+    <span>读者：编程初学者</span>
+    <span>深度：第 1 课</span>
+    <span>检索日期：2026-09-16</span>
+  </div>
+</header>
+
+<section>
+  <h2><span class="idx">1</span>个人解释</h2>
+  <p>Python 给你的"数据抽屉"分四类：<strong>列表（list）可变长队列</strong>、<strong>元组（tuple）只读队列</strong>、<strong>字典（dict）键值对柜子</strong>、<strong>集合（set）去重桶</strong>。选错了效率差 100 倍。</p>
+</section>
+
+<section>
+  <h2><span class="idx">2</span>核心机制</h2>
+  <h3>四类对比</h3>
+  <table class="vs-table">
+    <tr><th>类型</th><th>语法</th><th>可变？</th><th>有序？</th><th>典型用途</th></tr>
+    <tr><td>list</td><td>[1,2,3]</td><td>✓</td><td>✓</td><td>动态数组、可增删</td></tr>
+    <tr><td>tuple</td><td>(1,2,3)</td><td>✗</td><td>✓</td><td>不可变记录、字典 key</td></tr>
+    <tr><td>dict</td><td>{'a':1}</td><td>✓</td><td>插入序（3.7+）</td><td>键值查找</td></tr>
+    <tr><td>set</td><td>{1,2,3}</td><td>✓</td><td>✗</td><td>去重、集合运算</td></tr>
+  </table>
+  <h3>遍历</h3>
+  <div class="card">scores = [85, 92, 78]
+for i, s in enumerate(scores):
+    print(f"第 {i+1} 名：{s}")</div>
+</section>
+
+<section>
+  <h2><span class="idx">3</span>应用场景</h2>
+  <ol>
+    <li><strong>学生成绩排序</strong>：list 装分数、sorted() 排序</li>
+    <li><strong>单词计数</strong>：dict 计频、Counter 工具</li>
+    <li><strong>去重</strong>：list → set → list</li>
+    <li><strong>查表</strong>：dict 用姓名查成绩</li>
+  </ol>
+</section>
+
+<section>
+  <h2><span class="idx">4</span>边界辨析</h2>
+  <p><strong>常见误解</strong>：用 list 频繁查找 = 慢。list 是 O(n) 线性查找，dict 是 O(1) 哈希查找。要"判断某元素是否在容器中"，用 set/dict 更快。</p>
+</section>
+
+<section>
+  <h2><span class="idx">5</span>来源链接</h2>
+  <ul class="src">
+    <li><a href="https://docs.python.org/3/tutorial/datastructures.html" target="_blank">Data Structures — Python Docs</a><span class="type">官方教程</span></li>
+    <li><a href="https://docs.python.org/3/library/collections.html" target="_blank">collections — Python Docs</a><span class="type">官方参考</span></li>
+  </ul>
+  <p style="color:var(--m);font-size:14px;margin-top:16px;border-top:1px dashed var(--b);padding-top:14px">本资料由 concept-learning-skill 生成，已人工核查。检索日期：2026-09-16。</p>
+</section>
+<footer>Concept Learning Materials · python-containers.html</footer>
+</div>
+</body>
+</html>

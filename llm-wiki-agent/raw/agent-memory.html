@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<title>Agent Memory · 概念学习资料</title>
+<style>:root{--p:#7c3aed;--pl:#f5f3ff;--b:#e5e7eb;--t:#1f2937;--m:#6b7280;--w:#fffbeb;--wb:#f59e0b}*{box-sizing:border-box;margin:0;padding:0}body{font-family:"Microsoft YaHei","PingFang SC",sans-serif;color:var(--t);background:#f8fafc;line-height:1.8}.page{max-width:860px;margin:0 auto;padding:40px 24px 64px}header{background:#fff;border:1px solid var(--b);border-radius:14px;padding:36px 40px;margin-bottom:28px}h1{font-size:30px;color:var(--p);margin-bottom:6px}.en{color:var(--m);font-size:15px;margin-bottom:18px}.meta{display:flex;flex-wrap:wrap;gap:10px;font-size:13px}.meta span{background:var(--pl);color:var(--p);border-radius:999px;padding:3px 14px}section{background:#fff;border:1px solid var(--b);border-radius:14px;padding:32px 40px;margin-bottom:22px}h2{font-size:20px;color:var(--p);padding-bottom:10px;border-bottom:2px solid var(--pl);margin-bottom:18px}h2 .idx{display:inline-block;background:var(--p);color:#fff;font-size:13px;border-radius:6px;padding:1px 8px;margin-right:10px;vertical-align:2px}h3{font-size:16px;margin:20px 0 8px}p,li{margin-bottom:12px}ul,ol{padding-left:24px}.card{background:var(--pl);border-radius:10px;padding:18px 22px;margin:14px 0}.warn{background:var(--w);border-left:4px solid var(--wb);border-radius:8px;padding:16px 20px;margin:14px 0}.vs-table{width:100%;border-collapse:collapse;margin:14px 0;font-size:14.5px}.vs-table th,.vs-table td{border:1px solid var(--b);padding:10px 14px;text-align:left;vertical-align:top}.vs-table th{background:var(--pl);color:var(--p)}.src{list-style:none;padding-left:0}.src li{border:1px solid var(--b);border-radius:10px;padding:14px 18px;margin-bottom:10px}.src a{color:var(--p);text-decoration:none;font-weight:600}.src .type{display:inline-block;font-size:12px;color:var(--m);border:1px solid var(--b);border-radius:999px;padding:1px 10px;margin-left:10px}.term{font-weight:600;color:var(--p)}footer{text-align:center;color:var(--m);font-size:13px;margin-top:10px}</style>
+</head>
+<body>
+<div class="page">
+<header>
+  <h1>Agent Memory（智能体记忆）</h1>
+  <div class="en">Agent Memory / Working Memory vs Long-term Memory</div>
+  <div class="meta">
+    <span>领域：AI Agent / 上下文工程</span>
+    <span>读者：进阶学习者</span>
+    <span>深度：入门到进阶</span>
+    <span>检索日期：2026-09-16</span>
+  </div>
+</header>
+
+<section>
+  <h2><span class="idx">1</span>个人解释</h2>
+  <p>想象你在和一位<strong>只有 7 秒记忆的朋友</strong>聊天——他能回答你当前的句子，却不记得你三分钟前说过他叫什么名字、你喜欢什么。Agent Memory 就是给这位朋友装上一块<strong>外接硬盘</strong>，让他能记住"我是谁、我偏好什么、我以前解决过哪些问题"，并且能在需要时快速调取。</p>
+  <p>在工程上，Agent Memory 是<strong>让大模型突破上下文窗口限制、在多次会话中保持一致性</strong>的整套机制——既包括临时塞进提示词的短期记忆，也包括写入向量数据库或键值库的长期事实（<em>类比成立的前提是承认"记住"≠"理解"，记忆只是把信息存储起来供检索</em>）。</p>
+</section>
+
+<section>
+  <h2><span class="idx">2</span>核心机制</h2>
+  <h3>三种时间尺度</h3>
+  <table class="vs-table">
+    <tr><th>类型</th><th>存什么</th><th>怎么用</th></tr>
+    <tr><td>短期（Working）</td><td>当前会话的对话历史</td><td>直接拼进提示词；超长就截断或摘要</td></tr>
+    <tr><td>长期（Long-term）</td><td>用户偏好、过往结论、个性化事实</td><td>向量化后相似度检索，命中片段回填</td></tr>
+    <tr><td>情景/语义/程序性</td><td>具体事件（情景）· 概念知识（语义）· 操作步骤（程序）</td><td>按需分类检索</td></tr>
+  </table>
+  <h3>典型读写流程</h3>
+  <div class="card">
+    <strong>写入</strong>：每轮对话结束 → 抽取"值得记的事实"（用户姓名、偏好、决定）→ 嵌入 → 写入向量库<br>
+    <strong>读取</strong>：新一轮开始 → 用当前 query 做相似度检索 → 取出 top-k 条目 → 与对话历史拼成 prompt
+  </div>
+</section>
+
+<section>
+  <h2><span class="idx">3</span>应用场景</h2>
+  <ol>
+    <li><strong>个人助理跨会话记忆</strong>：记住用户是素食者、习惯每周二开会、不能吃花生</li>
+    <li><strong>客户支持 Agent</strong>：记住上次通话的投诉编号、用户已尝试过的方案，避免重复</li>
+    <li><strong>研究 Agent</strong>：积累每次实验结论、引用过的文献，避免下次重复查</li>
+    <li><strong>代码助手</strong>：记住项目命名约定、用户偏好的库版本、过往踩坑记录</li>
+    <li><strong>学习 Agent</strong>：记忆用户的薄弱知识点，按错题本式复习</li>
+  </ol>
+</section>
+
+<section>
+  <h2><span class="idx">4</span>边界辨析</h2>
+  <table class="vs-table">
+    <tr><th>易混项</th><th>核心区别</th></tr>
+    <tr><td>记忆 vs 上下文窗口</td><td>窗口是"临时内存"（断电丢）；记忆是"外接硬盘"（持久存）</td></tr>
+    <tr><td>记忆 vs RAG</td><td>RAG 是从文档库检索；记忆是从"关于用户/自身的事实库"检索</td></tr>
+    <tr><td>记忆 vs 微调</td><td>微调改"模型参数"，记忆改"输入内容"；前者永久但昂贵，后者灵活</td></tr>
+  </table>
+  <div class="warn">
+    <strong>常见误解：</strong>"记忆越多越好"——错。记忆会带来噪声与无关信息，反而干扰判断。工程要点是<strong>取舍</strong>：值得记什么、什么时候记、什么时候忘（过期清理）。
+  </div>
+</section>
+
+<section>
+  <h2><span class="idx">5</span>来源链接</h2>
+  <ul class="src">
+    <li><a href="https://lilianweng.github.io/posts/2023-06-23-agent/" target="_blank">LLM Powered Autonomous Agents — Lilian Weng</a><span class="type">综述博客</span><br>把记忆分为感官、短期、长期三类，给出 Long-Term Memory 的两种实现思路（Reflexion / Memory Stream）</li>
+    <li><a href="https://www.anthropic.com/news/context-engineering" target="_blank">Effective context engineering for AI agents — Anthropic</a><span class="type">官方博客</span><br>解释"上下文工程"如何替代"提示词工程"，记忆是其中一环</li>
+    <li><a href="https://docs.langchain.com/oss/python/langgraph/memory" target="_blank">Memory in LangGraph — LangChain Docs</a><span class="type">官方文档</span><br>短期/长期记忆的工程实现参考</li>
+  </ul>
+  <p class="note" style="color:var(--m);font-size:14px;margin-top:16px;border-top:1px dashed var(--b);padding-top:14px">本资料由 concept-learning-skill 生成，已人工核查。检索日期：2026-09-16。</p>
+</section>
+<footer>Concept Learning Materials · agent-memory.html</footer>
+</div>
+</body>
+</html>

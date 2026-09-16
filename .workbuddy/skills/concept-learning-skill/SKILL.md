@@ -1,5 +1,5 @@
 ---
-name: concept-learning-materials
+name: concept-learning-skill
 description: This skill should be used when the user provides any concept (from any domain, e.g. AI, programming, finance, biology) and wants structured learning materials for it. It generates a concept document containing five sections: personal explanation, core mechanism, application scenarios, boundary analysis, and source links. Accepts arbitrary new concepts as input; performs web research and self-checking before output.
 agent_created: true
 ---
